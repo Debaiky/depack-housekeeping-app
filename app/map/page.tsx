@@ -8,6 +8,7 @@ type AreaRatingSummary = AreaScore & {
   machineAvgScore: number | null;
   machineRatedCount: number;
   responsiblePerson?: string;
+  note?: string;
 };
 
 type MapResponse = {
@@ -110,6 +111,12 @@ export default function MapPage() {
                       </span>
                     </div>
                   ) : null}
+
+                  {summary?.note && (
+                    <p className="mt-2 pt-2 border-t border-zinc-100 text-xs text-zinc-500 italic">
+                      &quot;{summary.note}&quot;
+                    </p>
+                  )}
                 </div>
               );
             })}

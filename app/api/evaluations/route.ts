@@ -83,6 +83,8 @@ export async function POST(request: Request) {
       });
     }
 
+    const note = (formData.get(`note_${area.id}`) as string | null)?.trim() || "";
+
     evaluationRows.push({
       date,
       timestamp,
@@ -93,6 +95,7 @@ export async function POST(request: Request) {
       photoUrl,
       ratingType: "area" as const,
       responsiblePerson: "",
+      note,
     });
   }
 
@@ -117,6 +120,8 @@ export async function POST(request: Request) {
       });
     }
 
+    const note = (formData.get(`note_${area.id}`) as string | null)?.trim() || "";
+
     evaluationRows.push({
       date,
       timestamp,
@@ -127,6 +132,7 @@ export async function POST(request: Request) {
       photoUrl,
       ratingType: "area" as const,
       responsiblePerson: "",
+      note,
     });
 
     evaluationRows.push({
@@ -139,6 +145,7 @@ export async function POST(request: Request) {
       photoUrl: "",
       ratingType: "machine" as const,
       responsiblePerson,
+      note: "",
     });
   }
 

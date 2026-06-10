@@ -80,6 +80,7 @@ export type EvaluationRow = {
   photoUrl: string;
   ratingType: "area" | "machine";
   responsiblePerson: string;
+  note: string;
 };
 
 export async function appendEvaluationRows(rows: EvaluationRow[]) {
@@ -87,7 +88,7 @@ export async function appendEvaluationRows(rows: EvaluationRow[]) {
   const sheets = getSheetsClient();
   await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID(),
-    range: `${SHEETS.EVALUATIONS}!A:I`,
+    range: `${SHEETS.EVALUATIONS}!A:J`,
     valueInputOption: "RAW",
     insertDataOption: "INSERT_ROWS",
     requestBody: {
@@ -101,6 +102,7 @@ export async function appendEvaluationRows(rows: EvaluationRow[]) {
         r.photoUrl,
         r.ratingType,
         r.responsiblePerson,
+        r.note,
       ]),
     },
   });
@@ -154,13 +156,14 @@ export type AreaRatingSummary = {
   machineAvgScore: number | null;
   machineRatedCount: number;
   responsiblePerson?: string;
+  note?: string;
 };
 
 export async function getAreaRatingsForDate(date: string): Promise<Record<string, AreaRatingSummary>> {
   const sheets = getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID(),
-    range: `${SHEETS.EVALUATIONS}!A2:I`,
+    range: `${SHEETS.EVALUATIONS}!A2:J`,
   });
 
   const rows = res.data.values || [];
@@ -173,10 +176,7 @@ export async function getAreaRatingsForDate(date: string): Promise<Record<string
     const ratingRaw = row[5];
     const ratingType = row[7];
     const responsiblePerson = (row[8] || "").trim();
-
-    if (ratingRaw === NA) continue;
-    const rating = Number(ratingRaw);
-    if (!Number.isFinite(rating)) continue;
+    const note = (row[9] || "").trim();
 
     if (!result[areaId]) {
       result[areaId] = {
@@ -188,6 +188,12 @@ export async function getAreaRatingsForDate(date: string): Promise<Record<string
       };
     }
     const entry = result[areaId];
+
+    if (note && ratingType === "area") entry.note = note;
+
+    if (ratingRaw === NA) continue;
+    const rating = Number(ratingRaw);
+    if (!Number.isFinite(rating)) continue;
 
     if (ratingType === "area") {
       const sum = (entry.avgScore ?? 0) * entry.ratedCount + rating;

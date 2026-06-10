@@ -27,7 +27,7 @@ export const PRODUCTION_AREAS: Area[] = [
   { id: "hybrid_area", label: "Hybrid Area", group: AREA_GROUPS.PRODUCTION },
   { id: "sleeving_area", label: "Sleeving Area", group: AREA_GROUPS.PRODUCTION },
   { id: "open_space", label: "Open Space", group: AREA_GROUPS.PRODUCTION },
-  { id: "stored_plastic_rolls", label: "Stored Plastic Rolls", group: AREA_GROUPS.PRODUCTION },
+  { id: "stored_plastic_rolls", label: "Sheet Rolls", group: AREA_GROUPS.PRODUCTION },
   { id: "crusher_area", label: "Crusher Area", group: AREA_GROUPS.PRODUCTION },
   { id: "quality_control_room", label: "Quality Control Room", group: AREA_GROUPS.PRODUCTION },
   { id: "compressors_area", label: "Compressors Area", group: AREA_GROUPS.PRODUCTION },

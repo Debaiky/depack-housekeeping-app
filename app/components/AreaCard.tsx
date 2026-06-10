@@ -14,6 +14,8 @@ export default function AreaCard({
   onMachineRatingChange,
   responsiblePerson,
   onResponsiblePersonChange,
+  note,
+  onNoteChange,
 }: {
   area: Area;
   rating: RatingValue | null;
@@ -24,8 +26,11 @@ export default function AreaCard({
   onMachineRatingChange?: (rating: RatingValue) => void;
   responsiblePerson?: string;
   onResponsiblePersonChange?: (name: string) => void;
+  note?: string;
+  onNoteChange?: (note: string) => void;
 }) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [showNote, setShowNote] = useState(!!note);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0] || null;
@@ -91,6 +96,26 @@ export default function AreaCard({
             alt={`${area.label} preview`}
             className="mt-2 h-24 w-24 object-cover rounded-lg border border-zinc-200"
           />
+        )}
+      </div>
+
+      <div>
+        {showNote ? (
+          <textarea
+            value={note ?? ""}
+            onChange={(e) => onNoteChange?.(e.target.value)}
+            placeholder="Add a note about this area (optional)"
+            rows={2}
+            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setShowNote(true)}
+            className="text-sm text-blue-600 font-medium"
+          >
+            + Add note
+          </button>
         )}
       </div>
     </div>

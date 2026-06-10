@@ -84,10 +84,11 @@ Quality Control Room, Compressors Area, Material Feeding Area.
    - Leave `passwordHash` and `createdAt` blank — they're filled in on first login.
 
    **Evaluations** (row 1 headers):
-   `date | timestamp | userEmail | areaId | areaLabel | rating | photoUrl | ratingType | responsiblePerson`
+   `date | timestamp | userEmail | areaId | areaLabel | rating | photoUrl | ratingType | responsiblePerson | note`
    - `rating` is `1`-`5` or `NA`
    - `ratingType` is `area` or `machine`
    - `responsiblePerson` is only set for `machine` rows
+   - `note` is an optional free-text note, only set for `area` rows
 
    **DailySummary** (row 1 headers):
    `date | totalScore | avgScore | status | submittedBy | ratedCount`

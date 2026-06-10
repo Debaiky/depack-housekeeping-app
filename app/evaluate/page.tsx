@@ -10,6 +10,7 @@ export default function EvaluatePage() {
   const [ratings, setRatings] = useState<Record<string, RatingValue>>({});
   const [machineRatings, setMachineRatings] = useState<Record<string, RatingValue>>({});
   const [persons, setPersons] = useState<Record<string, string>>({});
+  const [notes, setNotes] = useState<Record<string, string>>({});
   const [photos, setPhotos] = useState<Record<string, File | null>>({});
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -33,6 +34,10 @@ export default function EvaluatePage() {
     setPersons((prev) => ({ ...prev, [areaId]: name }));
   }
 
+  function setNote(areaId: string, note: string) {
+    setNotes((prev) => ({ ...prev, [areaId]: note }));
+  }
+
   function setPhoto(areaId: string, file: File | null) {
     setPhotos((prev) => ({ ...prev, [areaId]: file }));
   }
@@ -53,6 +58,8 @@ export default function EvaluatePage() {
         formData.append(`rating_${area.id}`, String(ratings[area.id]));
         const photo = photos[area.id];
         if (photo) formData.append(`photo_${area.id}`, photo);
+        const note = notes[area.id];
+        if (note) formData.append(`note_${area.id}`, note);
       }
 
       for (const area of PRODUCTION_AREAS) {
@@ -62,6 +69,8 @@ export default function EvaluatePage() {
         if (person) formData.append(`person_${area.id}`, person);
         const photo = photos[area.id];
         if (photo) formData.append(`photo_${area.id}`, photo);
+        const note = notes[area.id];
+        if (note) formData.append(`note_${area.id}`, note);
       }
 
       const res = await fetch("/api/evaluations", {
@@ -116,6 +125,8 @@ export default function EvaluatePage() {
               rating={ratings[area.id] ?? null}
               onRatingChange={(r) => setRating(area.id, r)}
               onPhotoChange={(f) => setPhoto(area.id, f)}
+              note={notes[area.id] ?? ""}
+              onNoteChange={(n) => setNote(area.id, n)}
             />
           ))}
         </div>
@@ -138,6 +149,8 @@ export default function EvaluatePage() {
               onMachineRatingChange={(r) => setMachineRating(area.id, r)}
               responsiblePerson={persons[area.id] ?? ""}
               onResponsiblePersonChange={(name) => setPerson(area.id, name)}
+              note={notes[area.id] ?? ""}
+              onNoteChange={(n) => setNote(area.id, n)}
             />
           ))}
         </div>

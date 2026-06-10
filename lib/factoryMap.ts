@@ -8,6 +8,10 @@ export type MapRect = {
   y: number;
   w: number;
   h: number;
+  // Set to false for secondary rects that belong to the same area (e.g. the
+  // production area has two "Open Space" zones on the floor plan) so the
+  // label/score is only drawn once.
+  primary?: boolean;
 };
 
 export const FACTORY_MAP_IMAGE = "/factory-floorplan.png";
@@ -29,16 +33,16 @@ export const FACTORY_MAP_RECTS: MapRect[] = [
   { areaId: "quality_control_room", x: 84, y: 514, w: 49, h: 36 },
 
   // Center production block
-  { areaId: "open_space", x: 135, y: 205, w: 190, h: 74 },
+  { areaId: "open_space", x: 135, y: 205, w: 190, h: 74, primary: true },
   { areaId: "breyer_extruder", x: 135, y: 281, w: 190, h: 76 },
   { areaId: "rdk_area", x: 135, y: 358, w: 97, h: 38 },
   { areaId: "rdm_area", x: 135, y: 397, w: 97, h: 76 },
   { areaId: "sleeving_area", x: 135, y: 474, w: 97, h: 114 },
   { areaId: "polytype_area", x: 232, y: 358, w: 93, h: 76 },
   { areaId: "hybrid_area", x: 232, y: 434, w: 93, h: 40 },
-  { areaId: "open_space", x: 135, y: 474, w: 190, h: 114 },
+  { areaId: "open_space", x: 135, y: 474, w: 190, h: 114, primary: false },
 
-  // Right column - warehouse + stored plastic rolls
+  // Right column - warehouse + sheet rolls
   { areaId: "warehouse", x: 329, y: 205, w: 191, h: 383 },
   { areaId: "stored_plastic_rolls", x: 420, y: 480, w: 90, h: 100 },
 
@@ -46,6 +50,31 @@ export const FACTORY_MAP_RECTS: MapRect[] = [
   { areaId: "back_area", x: 84, y: 605, w: 232, h: 161 },
   { areaId: "back_building", x: 329, y: 605, w: 191, h: 161 },
 ];
+
+// Distinct identity color per area, taken from the original floor plan drawing,
+// drawn as the rect border so adjacent areas remain visually separated even
+// when they share a similar rating color.
+export const AREA_BORDER_COLORS: Record<string, string> = {
+  office_building: "rgb(254, 242, 80)",
+  changing_rooms: "rgb(150, 130, 130)",
+  sanitization_area: "rgb(104, 226, 75)",
+  cafeteria: "rgb(234, 130, 125)",
+  material_feeding_area: "rgb(71, 85, 228)",
+  compressors_area: "rgb(101, 186, 111)",
+  crusher_area: "rgb(55, 112, 58)",
+  quality_control_room: "rgb(170, 244, 184)",
+  open_space: "rgb(122, 232, 228)",
+  breyer_extruder: "rgb(65, 145, 139)",
+  rdk_area: "rgb(110, 48, 196)",
+  rdm_area: "rgb(182, 150, 242)",
+  sleeving_area: "rgb(80, 200, 196)",
+  polytype_area: "rgb(234, 246, 80)",
+  hybrid_area: "rgb(235, 170, 59)",
+  warehouse: "rgb(216, 78, 45)",
+  stored_plastic_rolls: "rgb(180, 140, 90)",
+  back_area: "rgb(150, 190, 150)",
+  back_building: "rgb(55, 112, 58)",
+};
 
 const COLOR_STOPS: [number, [number, number, number]][] = [
   [1, [220, 38, 38]], // red-600
