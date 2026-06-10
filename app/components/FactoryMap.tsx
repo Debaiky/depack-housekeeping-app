@@ -1,14 +1,19 @@
 "use client";
 
-import { ALL_AREAS } from "@/lib/areas";
-import { FACTORY_MAP_RECTS, FACTORY_MAP_VIEWBOX, scoreToColor, NO_DATA_COLOR } from "@/lib/factoryMap";
+import {
+  FACTORY_MAP_RECTS,
+  FACTORY_MAP_VIEWBOX,
+  FACTORY_MAP_IMAGE,
+  FACTORY_MAP_IMAGE_WIDTH,
+  FACTORY_MAP_IMAGE_HEIGHT,
+  scoreToColor,
+  NO_DATA_COLOR,
+} from "@/lib/factoryMap";
 
 export type AreaScore = {
   avgScore: number | null;
   ratedCount: number;
 };
-
-const LABELS = Object.fromEntries(ALL_AREAS.map((a) => [a.id, a.label]));
 
 export default function FactoryMap({
   scores,
@@ -25,11 +30,20 @@ export default function FactoryMap({
       className="w-full h-auto select-none rounded-xl border border-zinc-200 bg-white"
       xmlns="http://www.w3.org/2000/svg"
     >
+      <image
+        href={FACTORY_MAP_IMAGE}
+        x={0}
+        y={0}
+        width={FACTORY_MAP_IMAGE_WIDTH}
+        height={FACTORY_MAP_IMAGE_HEIGHT}
+        preserveAspectRatio="xMidYMid meet"
+      />
+
       {FACTORY_MAP_RECTS.map((rect, i) => {
         const score = scores[rect.areaId];
         const fill = score?.avgScore != null ? scoreToColor(score.avgScore) : NO_DATA_COLOR;
         const isSelected = selectedAreaId === rect.areaId;
-        const fontSize = Math.max(9, Math.min(15, Math.min(rect.w, rect.h) / 8));
+        const fontSize = Math.max(10, Math.min(20, Math.min(rect.w, rect.h) / 2.5));
 
         return (
           <g
@@ -43,30 +57,22 @@ export default function FactoryMap({
               width={rect.w}
               height={rect.h}
               fill={fill}
-              fillOpacity={0.85}
-              stroke={isSelected ? "#1d4ed8" : "#ffffff"}
-              strokeWidth={isSelected ? 4 : 2}
+              fillOpacity={0.55}
+              stroke={isSelected ? "#1d4ed8" : "rgba(255,255,255,0.8)"}
+              strokeWidth={isSelected ? 3 : 1}
             />
-            <text
-              x={rect.x + rect.w / 2}
-              y={rect.y + rect.h / 2 - (score?.avgScore != null ? fontSize * 0.7 : 0)}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fontSize={fontSize}
-              fill="#1f1f23"
-              className="pointer-events-none font-medium"
-            >
-              {LABELS[rect.areaId]}
-            </text>
             {score?.avgScore != null && (
               <text
                 x={rect.x + rect.w / 2}
-                y={rect.y + rect.h / 2 + fontSize}
+                y={rect.y + rect.h / 2}
                 textAnchor="middle"
                 dominantBaseline="middle"
-                fontSize={fontSize * 1.3}
+                fontSize={fontSize}
                 fontWeight="bold"
                 fill="#1f1f23"
+                stroke="#ffffff"
+                strokeWidth={fontSize / 8}
+                paintOrder="stroke"
                 className="pointer-events-none"
               >
                 {score.avgScore.toFixed(1)}
