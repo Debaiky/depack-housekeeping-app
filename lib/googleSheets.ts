@@ -1,4 +1,5 @@
 import { getSheetsClient } from "./google";
+import { NA, type RatingValue } from "./areas";
 
 const SHEET_ID = () => {
   const id = process.env.GOOGLE_SHEET_ID;
@@ -75,8 +76,10 @@ export type EvaluationRow = {
   userEmail: string;
   areaId: string;
   areaLabel: string;
-  rating: number;
+  rating: RatingValue;
   photoUrl: string;
+  ratingType: "area" | "machine";
+  responsiblePerson: string;
 };
 
 export async function appendEvaluationRows(rows: EvaluationRow[]) {
@@ -84,7 +87,7 @@ export async function appendEvaluationRows(rows: EvaluationRow[]) {
   const sheets = getSheetsClient();
   await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID(),
-    range: `${SHEETS.EVALUATIONS}!A:G`,
+    range: `${SHEETS.EVALUATIONS}!A:I`,
     valueInputOption: "RAW",
     insertDataOption: "INSERT_ROWS",
     requestBody: {
@@ -96,9 +99,52 @@ export async function appendEvaluationRows(rows: EvaluationRow[]) {
         r.areaLabel,
         r.rating,
         r.photoUrl,
+        r.ratingType,
+        r.responsiblePerson,
       ]),
     },
   });
+}
+
+export type PersonAverage = {
+  person: string;
+  avgScore: number;
+  ratedCount: number;
+};
+
+export async function getMachineRatingsByPerson(): Promise<PersonAverage[]> {
+  const sheets = getSheetsClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID(),
+    range: `${SHEETS.EVALUATIONS}!A2:I`,
+  });
+
+  const rows = res.data.values || [];
+  const totals = new Map<string, { sum: number; count: number }>();
+
+  for (const row of rows) {
+    const ratingType = row[7];
+    const responsiblePerson = (row[8] || "").trim();
+    const ratingRaw = row[5];
+
+    if (ratingType !== "machine" || !responsiblePerson || ratingRaw === NA) continue;
+
+    const rating = Number(ratingRaw);
+    if (!Number.isFinite(rating)) continue;
+
+    const entry = totals.get(responsiblePerson) || { sum: 0, count: 0 };
+    entry.sum += rating;
+    entry.count += 1;
+    totals.set(responsiblePerson, entry);
+  }
+
+  return Array.from(totals.entries())
+    .map(([person, { sum, count }]) => ({
+      person,
+      avgScore: sum / count,
+      ratedCount: count,
+    }))
+    .sort((a, b) => a.avgScore - b.avgScore);
 }
 
 export type DailySummaryRowFull = {
@@ -107,17 +153,18 @@ export type DailySummaryRowFull = {
   avgScore: number;
   status: string;
   submittedBy: string;
+  ratedCount: number;
 };
 
 export async function appendDailySummary(row: DailySummaryRowFull) {
   const sheets = getSheetsClient();
   await sheets.spreadsheets.values.append({
     spreadsheetId: SHEET_ID(),
-    range: `${SHEETS.DAILY_SUMMARY}!A:E`,
+    range: `${SHEETS.DAILY_SUMMARY}!A:F`,
     valueInputOption: "RAW",
     insertDataOption: "INSERT_ROWS",
     requestBody: {
-      values: [[row.date, row.totalScore, row.avgScore, row.status, row.submittedBy]],
+      values: [[row.date, row.totalScore, row.avgScore, row.status, row.submittedBy, row.ratedCount]],
     },
   });
 }
@@ -126,7 +173,7 @@ export async function getDailySummaries(): Promise<DailySummaryRowFull[]> {
   const sheets = getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID(),
-    range: `${SHEETS.DAILY_SUMMARY}!A2:E`,
+    range: `${SHEETS.DAILY_SUMMARY}!A2:F`,
   });
 
   const rows = res.data.values || [];
@@ -138,6 +185,7 @@ export async function getDailySummaries(): Promise<DailySummaryRowFull[]> {
       avgScore: Number(row[2]),
       status: row[3],
       submittedBy: row[4] || "",
+      ratedCount: Number(row[5] || 0),
     }));
 }
 

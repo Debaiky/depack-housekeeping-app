@@ -16,10 +16,17 @@ type PeriodResult = {
   status: string;
 };
 
+type PersonScore = {
+  person: string;
+  avgScore: number;
+  ratedCount: number;
+};
+
 type SummaryResponse = {
   daily: DailyRow[];
   weekly: PeriodResult;
   monthly: PeriodResult;
+  personScores: PersonScore[];
 };
 
 function StatusBadge({ status }: { status: string }) {
@@ -95,13 +102,42 @@ export default function HistoryPage() {
                 <div>
                   <p className="font-medium text-zinc-900">{row.date}</p>
                   <p className="text-sm text-zinc-500">
-                    Total {row.totalScore} / 95 · Avg {row.avgScore.toFixed(2)}
+                    Total {row.totalScore} · Avg {row.avgScore.toFixed(2)}
                   </p>
                 </div>
                 <StatusBadge status={row.status} />
               </div>
             ))}
           </div>
+
+          {data.personScores.length > 0 && (
+            <>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 mb-2 mt-6">
+                Machine Cleanliness by Responsible Person
+              </h2>
+              <div className="bg-white rounded-2xl border border-zinc-200 divide-y divide-zinc-100">
+                {data.personScores.map((p) => (
+                  <div key={p.person} className="flex items-center justify-between p-4">
+                    <div>
+                      <p className="font-medium text-zinc-900">{p.person}</p>
+                      <p className="text-sm text-zinc-500">{p.ratedCount} ratings</p>
+                    </div>
+                    <span
+                      className={`text-base font-semibold ${
+                        p.avgScore < 3
+                          ? "text-red-600"
+                          : p.avgScore < 3.5
+                          ? "text-amber-600"
+                          : "text-green-600"
+                      }`}
+                    >
+                      {p.avgScore.toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </>
       )}
     </main>

@@ -36,10 +36,25 @@ export const PRODUCTION_AREAS: Area[] = [
 
 export const ALL_AREAS: Area[] = [...MAIN_LOCATIONS, ...PRODUCTION_AREAS];
 
+export function isProductionArea(area: Area): boolean {
+  return area.group === AREA_GROUPS.PRODUCTION;
+}
+
+export const NA = "NA" as const;
+export type RatingValue = 1 | 2 | 3 | 4 | 5 | typeof NA;
+
 export const RATING_LABELS: Record<number, string> = {
   1: "Filthy / hazardous - immediate action required",
   2: "Poor - significant cleaning needed",
   3: "Acceptable - minimum standard",
   4: "Good",
   5: "Excellent / spotless",
+};
+
+export const MACHINE_RATING_LABELS: Record<number, string> = {
+  1: "Filthy machine - immediate cleaning required",
+  2: "Poor - significant cleaning needed",
+  3: "Acceptable - minimum standard",
+  4: "Good",
+  5: "Spotless machine",
 };

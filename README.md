@@ -7,7 +7,7 @@ satisfactory/unsatisfactory results are computed automatically.
 
 ## Scoring Matrix
 
-Each area is rated 1–5:
+Each area is rated 1–5, or **N/A** if it doesn't apply that day:
 
 | Score | Meaning |
 | --- | --- |
@@ -17,10 +17,18 @@ Each area is rated 1–5:
 | 4 | Good |
 | 5 | Excellent / spotless |
 
-**Daily result** (19 areas total, max score 95):
-- `Total Score` = sum of all area ratings
-- `Average Score` = Total / 19
-- **Unsatisfactory** if any single area scores below 3, OR the average is below 3.5
+Each Production Area sub-area also has a separate **Machine Cleanliness**
+rating (1–5, shown as a sad-to-happy smiley with a red-to-green color scale,
+or N/A) and an optional field for the **name of the person responsible** for
+that machine.
+
+**N/A handling**: any rating marked N/A is excluded from both the total and
+the average for that day — it does not count against the score.
+
+**Daily result**:
+- `Total Score` = sum of all non-N/A ratings (area + machine ratings)
+- `Average Score` = Total / (number of non-N/A ratings)
+- **Unsatisfactory** if any single rating scores below 3, OR the average is below 3.5
 
 **Weekly result**:
 - Average of each day's average score
@@ -62,10 +70,13 @@ Quality Control Room, Compressors Area, Material Feeding Area.
    - Leave `passwordHash` and `createdAt` blank — they're filled in on first login.
 
    **Evaluations** (row 1 headers):
-   `date | timestamp | userEmail | areaId | areaLabel | rating | photoUrl`
+   `date | timestamp | userEmail | areaId | areaLabel | rating | photoUrl | ratingType | responsiblePerson`
+   - `rating` is `1`-`5` or `NA`
+   - `ratingType` is `area` or `machine`
+   - `responsiblePerson` is only set for `machine` rows
 
    **DailySummary** (row 1 headers):
-   `date | totalScore | avgScore | status | submittedBy`
+   `date | totalScore | avgScore | status | submittedBy | ratedCount`
 
 3. Share the spreadsheet with your service account's email address (the
    `client_email` from the JSON key) with **Editor** access.
@@ -83,6 +94,18 @@ Copy `.env.local.example` to `.env.local` and fill in the values:
 ```bash
 cp .env.local.example .env.local
 ```
+
+For the Google credentials, the easiest and least error-prone option is to
+base64-encode the entire downloaded JSON key file and put it in
+`GOOGLE_SERVICE_ACCOUNT_KEY_BASE64`:
+
+```bash
+base64 -i path/to/service-account-key.json | tr -d '\n'
+```
+
+Paste the output as the value of `GOOGLE_SERVICE_ACCOUNT_KEY_BASE64` (one long
+line, no quotes needed). This avoids issues with pasting the multi-line
+`private_key` directly into a `.env` file.
 
 Generate a `JWT_SECRET` with:
 
@@ -113,10 +136,8 @@ from `.env.local` to the Vercel project settings (Production + Preview).
 
 ## Logo
 
-The header currently uses a text-based "Depack" wordmark
-(`app/components/Logo.tsx`) styled with the brand's blue/purple gradient. To use
-the real logo image instead, save it as `public/depack-logo.png` and replace the
-contents of `Logo.tsx` with an `<img src="/depack-logo.png" ... />` tag.
+The header uses the Depack logo from `public/depack-logo.png`, rendered via
+`app/components/Logo.tsx`.
 
 ## Project Structure
 

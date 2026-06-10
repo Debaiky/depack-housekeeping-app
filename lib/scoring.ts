@@ -1,28 +1,37 @@
-import { ALL_AREAS } from "./areas";
+import { NA, type RatingValue } from "./areas";
 
-export type AreaRating = {
-  areaId: string;
-  rating: number;
+export type RatingEntry = {
+  key: string;
+  rating: RatingValue;
 };
 
 export type DailyResult = {
   totalScore: number;
   avgScore: number;
+  ratedCount: number;
   status: "Satisfactory" | "Unsatisfactory";
 };
 
-const TOTAL_AREAS = ALL_AREAS.length;
 const AVG_THRESHOLD = 3.5;
 const MIN_AREA_RATING = 3;
 
-export function computeDailyResult(ratings: AreaRating[]): DailyResult {
-  const totalScore = ratings.reduce((sum, r) => sum + r.rating, 0);
-  const avgScore = totalScore / TOTAL_AREAS;
-  const anyBelowMin = ratings.some((r) => r.rating < MIN_AREA_RATING);
-  const status =
-    anyBelowMin || avgScore < AVG_THRESHOLD ? "Unsatisfactory" : "Satisfactory";
+export function computeDailyResult(ratings: RatingEntry[]): DailyResult {
+  const numeric = ratings.filter((r) => r.rating !== NA) as {
+    key: string;
+    rating: number;
+  }[];
 
-  return { totalScore, avgScore, status };
+  const totalScore = numeric.reduce((sum, r) => sum + r.rating, 0);
+  const ratedCount = numeric.length;
+  const avgScore = ratedCount > 0 ? totalScore / ratedCount : 0;
+  const anyBelowMin = numeric.some((r) => r.rating < MIN_AREA_RATING);
+
+  const status =
+    ratedCount === 0 || anyBelowMin || avgScore < AVG_THRESHOLD
+      ? "Unsatisfactory"
+      : "Satisfactory";
+
+  return { totalScore, avgScore, ratedCount, status };
 }
 
 export type DailySummaryRow = {

@@ -1,12 +1,25 @@
 import { NextResponse } from "next/server";
-import { ALL_AREAS } from "@/lib/areas";
-import { computeDailyResult } from "@/lib/scoring";
+import { MAIN_LOCATIONS, PRODUCTION_AREAS, NA, type RatingValue } from "@/lib/areas";
+import { computeDailyResult, type RatingEntry } from "@/lib/scoring";
 import { appendEvaluationRows, appendDailySummary, getSubmissionForDate } from "@/lib/googleSheets";
 import { uploadEvaluationPhoto } from "@/lib/googleDrive";
 import { getSession } from "@/lib/auth";
 
 function todayDate(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+function parseRating(value: FormDataEntryValue | null, label: string): RatingValue {
+  if (value === null) {
+    throw new Error(`Missing rating for ${label}`);
+  }
+  if (value === NA) return NA;
+
+  const rating = Number(value);
+  if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
+    throw new Error(`Invalid rating for ${label}`);
+  }
+  return rating as RatingValue;
 }
 
 export async function POST(request: Request) {
@@ -28,32 +41,36 @@ export async function POST(request: Request) {
   const formData = await request.formData();
   const timestamp = new Date().toISOString();
 
-  const ratings: { areaId: string; rating: number }[] = [];
+  let areaRatings: Record<string, RatingValue>;
+  let machineRatings: Record<string, RatingValue>;
 
-  for (const area of ALL_AREAS) {
-    const value = formData.get(`rating_${area.id}`);
-    if (value === null) {
-      return NextResponse.json(
-        { error: `Missing rating for ${area.label}` },
-        { status: 400 }
+  try {
+    areaRatings = {};
+    machineRatings = {};
+
+    for (const area of MAIN_LOCATIONS) {
+      areaRatings[area.id] = parseRating(formData.get(`rating_${area.id}`), area.label);
+    }
+
+    for (const area of PRODUCTION_AREAS) {
+      areaRatings[area.id] = parseRating(formData.get(`rating_${area.id}`), area.label);
+      machineRatings[area.id] = parseRating(
+        formData.get(`machine_rating_${area.id}`),
+        `${area.label} (machine)`
       );
     }
-    const rating = Number(value);
-    if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
-      return NextResponse.json(
-        { error: `Invalid rating for ${area.label}` },
-        { status: 400 }
-      );
-    }
-    ratings.push({ areaId: area.id, rating });
+  } catch (e) {
+    return NextResponse.json({ error: (e as Error).message }, { status: 400 });
   }
 
   const evaluationRows = [];
+  const ratingEntries: RatingEntry[] = [];
 
-  for (const area of ALL_AREAS) {
-    const rating = ratings.find((r) => r.areaId === area.id)!.rating;
+  for (const area of MAIN_LOCATIONS) {
+    const rating = areaRatings[area.id];
+    ratingEntries.push({ key: area.id, rating });
+
     let photoUrl = "";
-
     const photo = formData.get(`photo_${area.id}`);
     if (photo instanceof File && photo.size > 0) {
       const buffer = Buffer.from(await photo.arrayBuffer());
@@ -74,12 +91,60 @@ export async function POST(request: Request) {
       areaLabel: area.label,
       rating,
       photoUrl,
+      ratingType: "area" as const,
+      responsiblePerson: "",
+    });
+  }
+
+  for (const area of PRODUCTION_AREAS) {
+    const rating = areaRatings[area.id];
+    const machineRating = machineRatings[area.id];
+    const responsiblePerson = (formData.get(`person_${area.id}`) as string | null)?.trim() || "";
+
+    ratingEntries.push({ key: area.id, rating });
+    ratingEntries.push({ key: `machine_${area.id}`, rating: machineRating });
+
+    let photoUrl = "";
+    const photo = formData.get(`photo_${area.id}`);
+    if (photo instanceof File && photo.size > 0) {
+      const buffer = Buffer.from(await photo.arrayBuffer());
+      photoUrl = await uploadEvaluationPhoto({
+        date,
+        areaId: area.id,
+        userEmail: session.email,
+        buffer,
+        mimeType: photo.type || "image/jpeg",
+      });
+    }
+
+    evaluationRows.push({
+      date,
+      timestamp,
+      userEmail: session.email,
+      areaId: area.id,
+      areaLabel: area.label,
+      rating,
+      photoUrl,
+      ratingType: "area" as const,
+      responsiblePerson: "",
+    });
+
+    evaluationRows.push({
+      date,
+      timestamp,
+      userEmail: session.email,
+      areaId: area.id,
+      areaLabel: `${area.label} (Machine)`,
+      rating: machineRating,
+      photoUrl: "",
+      ratingType: "machine" as const,
+      responsiblePerson,
     });
   }
 
   await appendEvaluationRows(evaluationRows);
 
-  const result = computeDailyResult(ratings);
+  const result = computeDailyResult(ratingEntries);
 
   await appendDailySummary({
     date,
@@ -87,6 +152,7 @@ export async function POST(request: Request) {
     avgScore: Math.round(result.avgScore * 100) / 100,
     status: result.status,
     submittedBy: session.email,
+    ratedCount: result.ratedCount,
   });
 
   return NextResponse.json({ ok: true, result });

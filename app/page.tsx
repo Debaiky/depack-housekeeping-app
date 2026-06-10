@@ -12,6 +12,7 @@ type TodayResponse = {
     avgScore: number;
     status: string;
     submittedBy: string;
+    ratedCount: number;
   } | null;
 };
 
@@ -51,7 +52,9 @@ export default function Home() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-zinc-500">Total Score</span>
-            <span className="text-base font-semibold">{today.summary.totalScore} / 95</span>
+            <span className="text-base font-semibold">
+              {today.summary.totalScore} / {today.summary.ratedCount * 5}
+            </span>
           </div>
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-zinc-500">Average</span>

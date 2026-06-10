@@ -1,14 +1,14 @@
+import Image from "next/image";
+
 export default function Logo({ className = "h-10" }: { className?: string }) {
   return (
-    <div className={`flex items-center gap-2 ${className}`}>
-      <span
-        className="font-extrabold text-2xl bg-clip-text text-transparent"
-        style={{
-          backgroundImage: "linear-gradient(135deg, #22c1ff 0%, #3b3bf5 50%, #5a2bd6 100%)",
-        }}
-      >
-        Depack
-      </span>
-    </div>
+    <Image
+      src="/depack-logo.png"
+      alt="Depack"
+      width={160}
+      height={40}
+      priority
+      className={`w-auto object-contain ${className}`}
+    />
   );
 }

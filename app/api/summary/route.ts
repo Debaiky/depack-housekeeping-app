@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getDailySummaries } from "@/lib/googleSheets";
+import { getDailySummaries, getMachineRatingsByPerson } from "@/lib/googleSheets";
 import { computeWeeklyResult, computeMonthlyResult, type DailySummaryRow } from "@/lib/scoring";
 
 function startOfWeek(date: Date): Date {
@@ -13,6 +13,7 @@ function startOfWeek(date: Date): Date {
 
 export async function GET() {
   const summaries = await getDailySummaries();
+  const personScores = await getMachineRatingsByPerson();
 
   const sorted = [...summaries].sort((a, b) => (a.date < b.date ? 1 : -1));
 
@@ -37,5 +38,6 @@ export async function GET() {
     daily: sorted,
     weekly,
     monthly,
+    personScores,
   });
 }
