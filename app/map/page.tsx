@@ -12,7 +12,8 @@ type AreaRatingSummary = AreaScore & {
 };
 
 type MapResponse = {
-  date: string;
+  from: string;
+  to: string;
   areas: Record<string, AreaRatingSummary>;
 };
 
@@ -28,17 +29,20 @@ function scoreColorClass(score: number | null): string {
 }
 
 export default function MapPage() {
-  const [date, setDate] = useState(todayDate());
+  const [dateFrom, setDateFrom] = useState(todayDate());
+  const [dateTo, setDateTo] = useState(todayDate());
   const [data, setData] = useState<MapResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch(`/api/map?date=${date}`)
+    const from = dateFrom <= dateTo ? dateFrom : dateTo;
+    const to = dateFrom <= dateTo ? dateTo : dateFrom;
+    fetch(`/api/map?from=${from}&to=${to}`)
       .then((res) => res.json())
       .then(setData)
       .finally(() => setLoading(false));
-  }, [date]);
+  }, [dateFrom, dateTo]);
 
   const sortedAreas = [...ALL_AREAS].sort((a, b) => {
     const sa = data?.areas[a.id]?.avgScore;
@@ -53,16 +57,31 @@ export default function MapPage() {
     <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-6">
       <h1 className="text-xl font-semibold mb-1">Factory Map</h1>
       <p className="text-sm text-zinc-500 mb-4">
-        View average cleanliness ratings by area for any day.
+        View average cleanliness ratings by area over a date range.
       </p>
 
-      <input
-        type="date"
-        value={date}
-        max={todayDate()}
-        onChange={(e) => setDate(e.target.value)}
-        className="border border-zinc-300 rounded-lg px-3 py-2 text-sm mb-4"
-      />
+      <div className="flex items-center gap-2 mb-4">
+        <label className="text-sm text-zinc-500">
+          From
+          <input
+            type="date"
+            value={dateFrom}
+            max={todayDate()}
+            onChange={(e) => setDateFrom(e.target.value)}
+            className="block border border-zinc-300 rounded-lg px-3 py-2 text-sm mt-1"
+          />
+        </label>
+        <label className="text-sm text-zinc-500">
+          To
+          <input
+            type="date"
+            value={dateTo}
+            max={todayDate()}
+            onChange={(e) => setDateTo(e.target.value)}
+            className="block border border-zinc-300 rounded-lg px-3 py-2 text-sm mt-1"
+          />
+        </label>
+      </div>
 
       {loading ? (
         <p className="text-sm text-zinc-400">Loading...</p>

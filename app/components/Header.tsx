@@ -36,6 +36,9 @@ export default function Header({ userEmail }: { userEmail?: string | null }) {
               <Link href="/history" className="hover:text-blue-600">
                 History
               </Link>
+              <Link href="/users" className="hover:text-blue-600">
+                Users
+              </Link>
             </nav>
             <button
               onClick={handleLogout}

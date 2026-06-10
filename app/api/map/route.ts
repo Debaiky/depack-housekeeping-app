@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getAreaRatingsForDate } from "@/lib/googleSheets";
+import { getAreaRatingsForDateRange } from "@/lib/googleSheets";
 
 function todayDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -7,9 +7,11 @@ function todayDate(): string {
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const date = searchParams.get("date") || todayDate();
+  const today = todayDate();
+  const from = searchParams.get("from") || today;
+  const to = searchParams.get("to") || today;
 
-  const areas = await getAreaRatingsForDate(date);
+  const areas = await getAreaRatingsForDateRange(from, to);
 
-  return NextResponse.json({ date, areas });
+  return NextResponse.json({ from, to, areas });
 }

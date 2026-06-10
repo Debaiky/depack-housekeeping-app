@@ -159,7 +159,10 @@ export type AreaRatingSummary = {
   note?: string;
 };
 
-export async function getAreaRatingsForDate(date: string): Promise<Record<string, AreaRatingSummary>> {
+export async function getAreaRatingsForDateRange(
+  dateFrom: string,
+  dateTo: string
+): Promise<Record<string, AreaRatingSummary>> {
   const sheets = getSheetsClient();
   const res = await sheets.spreadsheets.values.get({
     spreadsheetId: SHEET_ID(),
@@ -168,9 +171,11 @@ export async function getAreaRatingsForDate(date: string): Promise<Record<string
 
   const rows = res.data.values || [];
   const result: Record<string, AreaRatingSummary> = {};
+  const latestNoteDate: Record<string, string> = {};
 
   for (const row of rows) {
-    if (row[0] !== date) continue;
+    const date = row[0];
+    if (!date || date < dateFrom || date > dateTo) continue;
 
     const areaId = row[3];
     const ratingRaw = row[5];
@@ -189,7 +194,10 @@ export async function getAreaRatingsForDate(date: string): Promise<Record<string
     }
     const entry = result[areaId];
 
-    if (note && ratingType === "area") entry.note = note;
+    if (note && ratingType === "area" && (!latestNoteDate[areaId] || date > latestNoteDate[areaId])) {
+      entry.note = note;
+      latestNoteDate[areaId] = date;
+    }
 
     if (ratingRaw === NA) continue;
     const rating = Number(ratingRaw);
@@ -304,4 +312,106 @@ export async function getDailySummaries(): Promise<DailySummaryRowFull[]> {
 export async function getSubmissionForDate(date: string): Promise<DailySummaryRowFull | null> {
   const summaries = await getDailySummaries();
   return summaries.find((s) => s.date === date) || null;
+}
+
+export type UserRatingSummary = {
+  email: string;
+  name: string;
+  totalCount: number;
+  weekCount: number;
+  monthCount: number;
+};
+
+export async function getUserRatingSummaries(): Promise<UserRatingSummary[]> {
+  const sheets = getSheetsClient();
+  const [usersRes, evalRes] = await Promise.all([
+    sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID(),
+      range: `${SHEETS.USERS}!A2:C`,
+    }),
+    sheets.spreadsheets.values.get({
+      spreadsheetId: SHEET_ID(),
+      range: `${SHEETS.EVALUATIONS}!A2:C`,
+    }),
+  ]);
+
+  const userRows = usersRes.data.values || [];
+  const evalRows = evalRes.data.values || [];
+
+  const today = new Date();
+  const monthStart = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-01`;
+  const dayOfWeek = (today.getDay() + 6) % 7; // 0 = Monday
+  const weekStartDate = new Date(today);
+  weekStartDate.setDate(today.getDate() - dayOfWeek);
+  const weekStart = weekStartDate.toISOString().slice(0, 10);
+
+  const counts = new Map<string, { total: number; week: number; month: number }>();
+  for (const row of evalRows) {
+    const date = row[0];
+    const email = (row[2] || "").trim().toLowerCase();
+    if (!email || !date) continue;
+
+    const entry = counts.get(email) || { total: 0, week: 0, month: 0 };
+    entry.total += 1;
+    if (date >= weekStart) entry.week += 1;
+    if (date >= monthStart) entry.month += 1;
+    counts.set(email, entry);
+  }
+
+  return userRows
+    .filter((row) => row[0])
+    .map((row) => {
+      const email = (row[0] || "").trim().toLowerCase();
+      const c = counts.get(email) || { total: 0, week: 0, month: 0 };
+      return {
+        email: row[0],
+        name: row[2] || "",
+        totalCount: c.total,
+        weekCount: c.week,
+        monthCount: c.month,
+      };
+    });
+}
+
+export type UserDayRating = {
+  date: string;
+  totalScore: number;
+  avgScore: number;
+  ratedCount: number;
+};
+
+export async function getUserDailyRatings(email: string): Promise<UserDayRating[]> {
+  const sheets = getSheetsClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID(),
+    range: `${SHEETS.EVALUATIONS}!A2:F`,
+  });
+
+  const rows = res.data.values || [];
+  const normalizedEmail = email.trim().toLowerCase();
+  const byDate = new Map<string, { sum: number; count: number }>();
+
+  for (const row of rows) {
+    const date = row[0];
+    const rowEmail = (row[2] || "").trim().toLowerCase();
+    const ratingRaw = row[5];
+    if (!date || rowEmail !== normalizedEmail || ratingRaw === NA) continue;
+
+    const rating = Number(ratingRaw);
+    if (!Number.isFinite(rating)) continue;
+
+    const entry = byDate.get(date) || { sum: 0, count: 0 };
+    entry.sum += rating;
+    entry.count += 1;
+    byDate.set(date, entry);
+  }
+
+  return Array.from(byDate.entries())
+    .map(([date, { sum, count }]) => ({
+      date,
+      totalScore: sum,
+      avgScore: sum / count,
+      ratedCount: count,
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
 }
