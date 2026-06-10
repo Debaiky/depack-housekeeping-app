@@ -1,65 +1,91 @@
-import Image from "next/image";
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+
+type TodayResponse = {
+  date: string;
+  submitted: boolean;
+  summary: {
+    date: string;
+    totalScore: number;
+    avgScore: number;
+    status: string;
+    submittedBy: string;
+  } | null;
+};
 
 export default function Home() {
+  const [today, setToday] = useState<TodayResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/evaluations/today")
+      .then((res) => res.json())
+      .then(setToday)
+      .finally(() => setLoading(false));
+  }, []);
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
+    <main className="flex-1 max-w-3xl w-full mx-auto px-4 py-6">
+      <h1 className="text-xl font-semibold mb-1">Today</h1>
+      <p className="text-sm text-zinc-500 mb-6">
+        {today?.date || new Date().toISOString().slice(0, 10)}
+      </p>
+
+      {loading ? (
+        <p className="text-sm text-zinc-400">Loading...</p>
+      ) : today?.submitted && today.summary ? (
+        <div className="bg-white rounded-2xl border border-zinc-200 p-6 space-y-3">
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-zinc-500">Status</span>
+            <span
+              className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                today.summary.status === "Satisfactory"
+                  ? "bg-green-100 text-green-700"
+                  : "bg-red-100 text-red-700"
+              }`}
             >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
+              {today.summary.status}
+            </span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-zinc-500">Total Score</span>
+            <span className="text-base font-semibold">{today.summary.totalScore} / 95</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-zinc-500">Average</span>
+            <span className="text-base font-semibold">{today.summary.avgScore.toFixed(2)}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-sm font-medium text-zinc-500">Submitted by</span>
+            <span className="text-sm">{today.summary.submittedBy}</span>
+          </div>
+          <p className="text-sm text-zinc-500 pt-2">
+            Today&apos;s evaluation has already been submitted. Check the{" "}
+            <Link href="/history" className="text-blue-600 font-medium underline">
+              history page
+            </Link>{" "}
+            for trends.
           </p>
         </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+      ) : (
+        <div className="bg-white rounded-2xl border border-zinc-200 p-6 text-center space-y-4">
+          <p className="text-zinc-700">No evaluation has been submitted for today yet.</p>
+          <Link
+            href="/evaluate"
+            className="inline-block w-full rounded-lg bg-blue-600 text-white font-semibold py-3 text-base"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            Start Today&apos;s Evaluation
+          </Link>
         </div>
-      </main>
-    </div>
+      )}
+
+      <div className="mt-6">
+        <Link href="/history" className="text-sm text-blue-600 font-medium underline">
+          View weekly &amp; monthly history →
+        </Link>
+      </div>
+    </main>
   );
 }
