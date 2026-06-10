@@ -1,13 +1,7 @@
 "use client";
 
-import { ALL_AREAS } from "@/lib/areas";
-import {
-  FACTORY_MAP_RECTS,
-  FACTORY_MAP_VIEWBOX,
-  AREA_BORDER_COLORS,
-  scoreToColor,
-  NO_DATA_COLOR,
-} from "@/lib/factoryMap";
+import { ALL_AREAS, hasMachineRating } from "@/lib/areas";
+import { FACTORY_MAP_RECTS, FACTORY_MAP_VIEWBOX, scoreToColor, NO_DATA_COLOR } from "@/lib/factoryMap";
 
 export type AreaScore = {
   avgScore: number | null;
@@ -17,6 +11,28 @@ export type AreaScore = {
 };
 
 const LABELS = Object.fromEntries(ALL_AREAS.map((a) => [a.id, a.label]));
+const MACHINE_AREA_IDS = new Set(ALL_AREAS.filter(hasMachineRating).map((a) => a.id));
+
+// Roughly approximate how many characters of a given font size fit in a width,
+// then greedily wrap words onto lines so labels stay inside their box.
+function wrapLabel(text: string, maxWidth: number, fontSize: number): string[] {
+  const maxChars = Math.max(1, Math.floor(maxWidth / (fontSize * 0.55)));
+  const words = text.split(" ");
+  const lines: string[] = [];
+  let current = "";
+
+  for (const word of words) {
+    const candidate = current ? `${current} ${word}` : word;
+    if (candidate.length > maxChars && current) {
+      lines.push(current);
+      current = word;
+    } else {
+      current = candidate;
+    }
+  }
+  if (current) lines.push(current);
+  return lines;
+}
 
 export default function FactoryMap({
   scores,
@@ -35,21 +51,25 @@ export default function FactoryMap({
     >
       {FACTORY_MAP_RECTS.map((rect, i) => {
         const score = scores[rect.areaId];
-        const ratingColor = score?.avgScore != null ? scoreToColor(score.avgScore) : null;
-        const fill = ratingColor ?? NO_DATA_COLOR;
+        const fill = score?.avgScore != null ? scoreToColor(score.avgScore) : NO_DATA_COLOR;
         const isSelected = selectedAreaId === rect.areaId;
         const showDetails = rect.primary !== false;
-        const hasMachine = !!score?.machineRatedCount;
+        const hasMachine = MACHINE_AREA_IDS.has(rect.areaId) && !!score?.machineRatedCount;
 
-        const labelFontSize = Math.max(9, Math.min(15, Math.min(rect.w, rect.h) / 8));
-        const scoreFontSize = labelFontSize * 1.4;
-        const machineFontSize = labelFontSize * 0.85;
+        const fontSize = Math.max(9, Math.min(15, Math.min(rect.w, rect.h) / 8));
+        const lineHeight = fontSize * 1.15;
+        const scoreFontSize = fontSize * 1.3;
+        const machineFontSize = fontSize * 0.9;
 
-        const labelY = rect.y + rect.h / 2 - (showDetails ? scoreFontSize * (hasMachine ? 1.0 : 0.6) : 0);
-        const scoreY = rect.y + rect.h / 2 + (hasMachine ? scoreFontSize * 0.15 : scoreFontSize * 0.5);
-        const pillY = scoreY + scoreFontSize * 0.55;
-        const pillWidth = machineFontSize * 4.4;
-        const pillHeight = machineFontSize * 1.7;
+        const labelLines = showDetails ? wrapLabel(LABELS[rect.areaId], rect.w - 8, fontSize) : [];
+        const labelHeight = labelLines.length * lineHeight;
+        const scoreHeight = score?.avgScore != null ? scoreFontSize * 1.1 : 0;
+        const machineHeight = hasMachine ? machineFontSize * 1.2 : 0;
+        const contentHeight = labelHeight + scoreHeight + machineHeight;
+
+        const startY = rect.y + rect.h / 2 - contentHeight / 2 + lineHeight / 2;
+        const scoreY = startY + labelHeight - lineHeight / 2 + scoreFontSize * 0.6;
+        const machineY = scoreY + scoreFontSize * 0.5 + machineFontSize;
 
         return (
           <g
@@ -62,25 +82,25 @@ export default function FactoryMap({
               y={rect.y}
               width={rect.w}
               height={rect.h}
-              rx={6}
               fill={fill}
-              fillOpacity={ratingColor ? 0.22 : 0.6}
-              stroke={isSelected ? "#1d4ed8" : AREA_BORDER_COLORS[rect.areaId] || "#d4d4d8"}
-              strokeWidth={isSelected ? 3 : 1.5}
+              fillOpacity={0.85}
+              stroke={isSelected ? "#1d4ed8" : "#ffffff"}
+              strokeWidth={isSelected ? 4 : 2}
             />
             {showDetails && (
               <>
                 <text
                   x={rect.x + rect.w / 2}
-                  y={labelY}
                   textAnchor="middle"
-                  dominantBaseline="middle"
-                  fontSize={labelFontSize}
-                  fontWeight="500"
-                  fill="#52525b"
-                  className="pointer-events-none"
+                  fontSize={fontSize}
+                  fill="#1f1f23"
+                  className="pointer-events-none font-medium"
                 >
-                  {LABELS[rect.areaId]}
+                  {labelLines.map((line, li) => (
+                    <tspan key={li} x={rect.x + rect.w / 2} y={startY + li * lineHeight}>
+                      {line}
+                    </tspan>
+                  ))}
                 </text>
                 {score?.avgScore != null && (
                   <text
@@ -89,37 +109,26 @@ export default function FactoryMap({
                     textAnchor="middle"
                     dominantBaseline="middle"
                     fontSize={scoreFontSize}
-                    fontWeight="700"
-                    fill={ratingColor ?? "#18181b"}
+                    fontWeight="bold"
+                    fill="#1f1f23"
                     className="pointer-events-none"
                   >
                     {score.avgScore.toFixed(1)}
                   </text>
                 )}
                 {hasMachine && score?.machineAvgScore != null && (
-                  <g className="pointer-events-none">
-                    <rect
-                      x={rect.x + rect.w / 2 - pillWidth / 2}
-                      y={pillY}
-                      width={pillWidth}
-                      height={pillHeight}
-                      rx={pillHeight / 2}
-                      fill="#ffffff"
-                      stroke="#e4e4e7"
-                      strokeWidth={1}
-                    />
-                    <text
-                      x={rect.x + rect.w / 2}
-                      y={pillY + pillHeight / 2 + 0.5}
-                      textAnchor="middle"
-                      dominantBaseline="middle"
-                      fontSize={machineFontSize}
-                      fontWeight="600"
-                      fill="#3f3f46"
-                    >
-                      M {score.machineAvgScore.toFixed(1)}
-                    </text>
-                  </g>
+                  <text
+                    x={rect.x + rect.w / 2}
+                    y={machineY}
+                    textAnchor="middle"
+                    dominantBaseline="middle"
+                    fontSize={machineFontSize}
+                    fontWeight="600"
+                    fill="#1f1f23"
+                    className="pointer-events-none"
+                  >
+                    M: {score.machineAvgScore.toFixed(1)}
+                  </text>
                 )}
               </>
             )}

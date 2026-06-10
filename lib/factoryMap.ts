@@ -50,31 +50,6 @@ export const FACTORY_MAP_RECTS: MapRect[] = [
   { areaId: "back_building", x: 360, y: 820, w: 360, h: 180 },
 ];
 
-// Distinct identity color per area, taken from the original floor plan drawing,
-// drawn as the rect border so adjacent areas remain visually separated even
-// when they share a similar rating color.
-export const AREA_BORDER_COLORS: Record<string, string> = {
-  office_building: "rgb(254, 242, 80)",
-  changing_rooms: "rgb(150, 130, 130)",
-  sanitization_area: "rgb(104, 226, 75)",
-  cafeteria: "rgb(234, 130, 125)",
-  material_feeding_area: "rgb(71, 85, 228)",
-  compressors_area: "rgb(101, 186, 111)",
-  crusher_area: "rgb(55, 112, 58)",
-  quality_control_room: "rgb(170, 244, 184)",
-  open_space: "rgb(122, 232, 228)",
-  breyer_extruder: "rgb(65, 145, 139)",
-  rdk_area: "rgb(110, 48, 196)",
-  rdm_area: "rgb(182, 150, 242)",
-  sleeving_area: "rgb(80, 200, 196)",
-  polytype_area: "rgb(234, 246, 80)",
-  hybrid_area: "rgb(235, 170, 59)",
-  warehouse: "rgb(216, 78, 45)",
-  stored_plastic_rolls: "rgb(180, 140, 90)",
-  back_area: "rgb(150, 190, 150)",
-  back_building: "rgb(55, 112, 58)",
-};
-
 const COLOR_STOPS: [number, [number, number, number]][] = [
   [1, [220, 38, 38]], // red-600
   [2, [249, 115, 22]], // orange-500
