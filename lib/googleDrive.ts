@@ -14,6 +14,8 @@ async function getOrCreateDateFolder(date: string): Promise<string> {
   const existing = await drive.files.list({
     q: `'${parent}' in parents and name = '${date}' and mimeType = 'application/vnd.google-apps.folder' and trashed = false`,
     fields: "files(id, name)",
+    supportsAllDrives: true,
+    includeItemsFromAllDrives: true,
   });
 
   if (existing.data.files && existing.data.files.length > 0) {
@@ -27,6 +29,7 @@ async function getOrCreateDateFolder(date: string): Promise<string> {
       parents: [parent],
     },
     fields: "id",
+    supportsAllDrives: true,
   });
 
   return created.data.id as string;
@@ -56,6 +59,7 @@ export async function uploadEvaluationPhoto(opts: {
       body: Readable.from(opts.buffer),
     },
     fields: "id, webViewLink",
+    supportsAllDrives: true,
   });
 
   const fileId = created.data.id as string;
@@ -66,11 +70,13 @@ export async function uploadEvaluationPhoto(opts: {
       role: "reader",
       type: "anyone",
     },
+    supportsAllDrives: true,
   });
 
   const file = await drive.files.get({
     fileId,
     fields: "webViewLink",
+    supportsAllDrives: true,
   });
 
   return file.data.webViewLink || `https://drive.google.com/file/d/${fileId}/view`;
