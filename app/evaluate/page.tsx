@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MAIN_LOCATIONS, PRODUCTION_AREAS, type RatingValue } from "@/lib/areas";
+import { MAIN_LOCATIONS, PRODUCTION_AREAS, hasMachineRating, type RatingValue } from "@/lib/areas";
 import AreaCard from "@/app/components/AreaCard";
+
+const MACHINE_RATED_AREAS = PRODUCTION_AREAS.filter(hasMachineRating);
 
 export default function EvaluatePage() {
   const router = useRouter();
@@ -15,11 +17,11 @@ export default function EvaluatePage() {
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
-  const totalRequired = MAIN_LOCATIONS.length + PRODUCTION_AREAS.length * 2;
+  const totalRequired = MAIN_LOCATIONS.length + PRODUCTION_AREAS.length + MACHINE_RATED_AREAS.length;
   const completed =
     MAIN_LOCATIONS.filter((a) => ratings[a.id] !== undefined).length +
     PRODUCTION_AREAS.filter((a) => ratings[a.id] !== undefined).length +
-    PRODUCTION_AREAS.filter((a) => machineRatings[a.id] !== undefined).length;
+    MACHINE_RATED_AREAS.filter((a) => machineRatings[a.id] !== undefined).length;
   const allRated = completed === totalRequired;
 
   function setRating(areaId: string, rating: RatingValue) {
@@ -64,9 +66,11 @@ export default function EvaluatePage() {
 
       for (const area of PRODUCTION_AREAS) {
         formData.append(`rating_${area.id}`, String(ratings[area.id]));
-        formData.append(`machine_rating_${area.id}`, String(machineRatings[area.id]));
-        const person = persons[area.id];
-        if (person) formData.append(`person_${area.id}`, person);
+        if (hasMachineRating(area)) {
+          formData.append(`machine_rating_${area.id}`, String(machineRatings[area.id]));
+          const person = persons[area.id];
+          if (person) formData.append(`person_${area.id}`, person);
+        }
         const photo = photos[area.id];
         if (photo) formData.append(`photo_${area.id}`, photo);
         const note = notes[area.id];
@@ -144,7 +148,7 @@ export default function EvaluatePage() {
               rating={ratings[area.id] ?? null}
               onRatingChange={(r) => setRating(area.id, r)}
               onPhotoChange={(f) => setPhoto(area.id, f)}
-              showMachineRating
+              showMachineRating={hasMachineRating(area)}
               machineRating={machineRatings[area.id] ?? null}
               onMachineRatingChange={(r) => setMachineRating(area.id, r)}
               responsiblePerson={persons[area.id] ?? ""}

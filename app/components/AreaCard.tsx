@@ -41,22 +41,22 @@ export default function AreaCard({
   }
 
   return (
-    <div className="bg-white rounded-xl border border-zinc-200 p-4 space-y-3">
+    <div className="bg-white rounded-2xl border border-zinc-100 shadow-sm p-5 space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="font-medium text-zinc-900">{area.label}</h3>
+        <h3 className="font-semibold text-zinc-900">{area.label}</h3>
         {rating !== null && rating !== NA && (
-          <span className="text-xs text-zinc-500">{RATING_LABELS[rating]}</span>
+          <span className="text-xs text-zinc-400">{RATING_LABELS[rating]}</span>
         )}
       </div>
 
       <RatingButtons value={rating} onChange={onRatingChange} />
 
       {showMachineRating && (
-        <div className="pt-2 border-t border-zinc-100 space-y-2">
+        <div className="rounded-xl bg-zinc-50 p-3 space-y-3">
           <div className="flex items-center justify-between">
             <h4 className="text-sm font-medium text-zinc-700">Machine Cleanliness</h4>
             {machineRating !== null && machineRating !== undefined && machineRating !== NA && (
-              <span className="text-xs text-zinc-500">{MACHINE_RATING_LABELS[machineRating]}</span>
+              <span className="text-xs text-zinc-400">{MACHINE_RATING_LABELS[machineRating]}</span>
             )}
           </div>
           <RatingButtons
@@ -73,7 +73,7 @@ export default function AreaCard({
               value={responsiblePerson ?? ""}
               onChange={(e) => onResponsiblePersonChange?.(e.target.value)}
               placeholder="Name"
-              className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full rounded-lg border border-zinc-200 bg-white px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
         </div>
@@ -106,7 +106,7 @@ export default function AreaCard({
             onChange={(e) => onNoteChange?.(e.target.value)}
             placeholder="Add a note about this area (optional)"
             rows={2}
-            className="w-full rounded-lg border border-zinc-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full rounded-lg border border-zinc-200 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
         ) : (
           <button

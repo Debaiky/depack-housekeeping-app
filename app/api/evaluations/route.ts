@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { MAIN_LOCATIONS, PRODUCTION_AREAS, NA, type RatingValue } from "@/lib/areas";
+import { MAIN_LOCATIONS, PRODUCTION_AREAS, NA, hasMachineRating, type RatingValue } from "@/lib/areas";
 import { computeDailyResult, type RatingEntry } from "@/lib/scoring";
 import { appendEvaluationRows, appendDailySummary, getSubmissionForDate } from "@/lib/googleSheets";
 import { uploadEvaluationPhoto } from "@/lib/googleDrive";
@@ -54,10 +54,12 @@ export async function POST(request: Request) {
 
     for (const area of PRODUCTION_AREAS) {
       areaRatings[area.id] = parseRating(formData.get(`rating_${area.id}`), area.label);
-      machineRatings[area.id] = parseRating(
-        formData.get(`machine_rating_${area.id}`),
-        `${area.label} (machine)`
-      );
+      if (hasMachineRating(area)) {
+        machineRatings[area.id] = parseRating(
+          formData.get(`machine_rating_${area.id}`),
+          `${area.label} (machine)`
+        );
+      }
     }
   } catch (e) {
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });
@@ -105,7 +107,9 @@ export async function POST(request: Request) {
     const responsiblePerson = (formData.get(`person_${area.id}`) as string | null)?.trim() || "";
 
     ratingEntries.push({ key: area.id, rating });
-    ratingEntries.push({ key: `machine_${area.id}`, rating: machineRating });
+    if (hasMachineRating(area)) {
+      ratingEntries.push({ key: `machine_${area.id}`, rating: machineRating });
+    }
 
     let photoUrl = "";
     const photo = formData.get(`photo_${area.id}`);
@@ -135,18 +139,20 @@ export async function POST(request: Request) {
       note,
     });
 
-    evaluationRows.push({
-      date,
-      timestamp,
-      userEmail: session.email,
-      areaId: area.id,
-      areaLabel: `${area.label} (Machine)`,
-      rating: machineRating,
-      photoUrl: "",
-      ratingType: "machine" as const,
-      responsiblePerson,
-      note: "",
-    });
+    if (hasMachineRating(area)) {
+      evaluationRows.push({
+        date,
+        timestamp,
+        userEmail: session.email,
+        areaId: area.id,
+        areaLabel: `${area.label} (Machine)`,
+        rating: machineRating,
+        photoUrl: "",
+        ratingType: "machine" as const,
+        responsiblePerson,
+        note: "",
+      });
+    }
   }
 
   await appendEvaluationRows(evaluationRows);

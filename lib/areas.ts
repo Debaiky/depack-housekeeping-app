@@ -40,6 +40,20 @@ export function isProductionArea(area: Area): boolean {
   return area.group === AREA_GROUPS.PRODUCTION;
 }
 
+// Only these production areas have a machine that gets its own cleanliness rating.
+const MACHINE_RATED_AREA_IDS = new Set([
+  "breyer_extruder",
+  "rdk_area",
+  "rdm_area",
+  "polytype_area",
+  "hybrid_area",
+  "sleeving_area",
+]);
+
+export function hasMachineRating(area: Area): boolean {
+  return MACHINE_RATED_AREA_IDS.has(area.id);
+}
+
 export const NA = "NA" as const;
 export type RatingValue = 1 | 2 | 3 | 4 | 5 | typeof NA;
 

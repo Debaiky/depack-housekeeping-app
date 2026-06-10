@@ -35,18 +35,21 @@ export default function FactoryMap({
     >
       {FACTORY_MAP_RECTS.map((rect, i) => {
         const score = scores[rect.areaId];
-        const fill = score?.avgScore != null ? scoreToColor(score.avgScore) : NO_DATA_COLOR;
+        const ratingColor = score?.avgScore != null ? scoreToColor(score.avgScore) : null;
+        const fill = ratingColor ?? NO_DATA_COLOR;
         const isSelected = selectedAreaId === rect.areaId;
         const showDetails = rect.primary !== false;
         const hasMachine = !!score?.machineRatedCount;
 
         const labelFontSize = Math.max(9, Math.min(15, Math.min(rect.w, rect.h) / 8));
-        const scoreFontSize = labelFontSize * 1.3;
-        const machineFontSize = labelFontSize * 0.9;
+        const scoreFontSize = labelFontSize * 1.4;
+        const machineFontSize = labelFontSize * 0.85;
 
-        const labelY = rect.y + rect.h / 2 - (showDetails ? scoreFontSize * (hasMachine ? 1.1 : 0.7) : 0);
-        const scoreY = rect.y + rect.h / 2 + (hasMachine ? 0 : scoreFontSize * 0.6);
-        const machineY = scoreY + machineFontSize + 4;
+        const labelY = rect.y + rect.h / 2 - (showDetails ? scoreFontSize * (hasMachine ? 1.0 : 0.6) : 0);
+        const scoreY = rect.y + rect.h / 2 + (hasMachine ? scoreFontSize * 0.15 : scoreFontSize * 0.5);
+        const pillY = scoreY + scoreFontSize * 0.55;
+        const pillWidth = machineFontSize * 4.4;
+        const pillHeight = machineFontSize * 1.7;
 
         return (
           <g
@@ -59,10 +62,11 @@ export default function FactoryMap({
               y={rect.y}
               width={rect.w}
               height={rect.h}
+              rx={6}
               fill={fill}
-              fillOpacity={0.85}
-              stroke={isSelected ? "#1d4ed8" : AREA_BORDER_COLORS[rect.areaId] || "#ffffff"}
-              strokeWidth={isSelected ? 4 : 2}
+              fillOpacity={ratingColor ? 0.22 : 0.6}
+              stroke={isSelected ? "#1d4ed8" : AREA_BORDER_COLORS[rect.areaId] || "#d4d4d8"}
+              strokeWidth={isSelected ? 3 : 1.5}
             />
             {showDetails && (
               <>
@@ -72,11 +76,9 @@ export default function FactoryMap({
                   textAnchor="middle"
                   dominantBaseline="middle"
                   fontSize={labelFontSize}
-                  fill="#1f1f23"
-                  stroke="#ffffff"
-                  strokeWidth={labelFontSize / 6}
-                  paintOrder="stroke"
-                  className="pointer-events-none font-medium"
+                  fontWeight="500"
+                  fill="#52525b"
+                  className="pointer-events-none"
                 >
                   {LABELS[rect.areaId]}
                 </text>
@@ -87,32 +89,37 @@ export default function FactoryMap({
                     textAnchor="middle"
                     dominantBaseline="middle"
                     fontSize={scoreFontSize}
-                    fontWeight="bold"
-                    fill="#1f1f23"
-                    stroke="#ffffff"
-                    strokeWidth={scoreFontSize / 8}
-                    paintOrder="stroke"
+                    fontWeight="700"
+                    fill={ratingColor ?? "#18181b"}
                     className="pointer-events-none"
                   >
                     {score.avgScore.toFixed(1)}
                   </text>
                 )}
                 {hasMachine && score?.machineAvgScore != null && (
-                  <text
-                    x={rect.x + rect.w / 2}
-                    y={machineY}
-                    textAnchor="middle"
-                    dominantBaseline="middle"
-                    fontSize={machineFontSize}
-                    fontWeight="600"
-                    fill="#1f1f23"
-                    stroke="#ffffff"
-                    strokeWidth={machineFontSize / 6}
-                    paintOrder="stroke"
-                    className="pointer-events-none"
-                  >
-                    M: {score.machineAvgScore.toFixed(1)}
-                  </text>
+                  <g className="pointer-events-none">
+                    <rect
+                      x={rect.x + rect.w / 2 - pillWidth / 2}
+                      y={pillY}
+                      width={pillWidth}
+                      height={pillHeight}
+                      rx={pillHeight / 2}
+                      fill="#ffffff"
+                      stroke="#e4e4e7"
+                      strokeWidth={1}
+                    />
+                    <text
+                      x={rect.x + rect.w / 2}
+                      y={pillY + pillHeight / 2 + 0.5}
+                      textAnchor="middle"
+                      dominantBaseline="middle"
+                      fontSize={machineFontSize}
+                      fontWeight="600"
+                      fill="#3f3f46"
+                    >
+                      M {score.machineAvgScore.toFixed(1)}
+                    </text>
+                  </g>
                 )}
               </>
             )}
