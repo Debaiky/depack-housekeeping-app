@@ -147,6 +147,112 @@ export async function getMachineRatingsByPerson(): Promise<PersonAverage[]> {
     .sort((a, b) => a.avgScore - b.avgScore);
 }
 
+export type AreaRatingSummary = {
+  areaId: string;
+  avgScore: number | null;
+  ratedCount: number;
+  machineAvgScore: number | null;
+  machineRatedCount: number;
+  responsiblePerson?: string;
+};
+
+export async function getAreaRatingsForDate(date: string): Promise<Record<string, AreaRatingSummary>> {
+  const sheets = getSheetsClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID(),
+    range: `${SHEETS.EVALUATIONS}!A2:I`,
+  });
+
+  const rows = res.data.values || [];
+  const result: Record<string, AreaRatingSummary> = {};
+
+  for (const row of rows) {
+    if (row[0] !== date) continue;
+
+    const areaId = row[3];
+    const ratingRaw = row[5];
+    const ratingType = row[7];
+    const responsiblePerson = (row[8] || "").trim();
+
+    if (ratingRaw === NA) continue;
+    const rating = Number(ratingRaw);
+    if (!Number.isFinite(rating)) continue;
+
+    if (!result[areaId]) {
+      result[areaId] = {
+        areaId,
+        avgScore: null,
+        ratedCount: 0,
+        machineAvgScore: null,
+        machineRatedCount: 0,
+      };
+    }
+    const entry = result[areaId];
+
+    if (ratingType === "area") {
+      const sum = (entry.avgScore ?? 0) * entry.ratedCount + rating;
+      entry.ratedCount += 1;
+      entry.avgScore = sum / entry.ratedCount;
+    } else if (ratingType === "machine") {
+      const sum = (entry.machineAvgScore ?? 0) * entry.machineRatedCount + rating;
+      entry.machineRatedCount += 1;
+      entry.machineAvgScore = sum / entry.machineRatedCount;
+      if (responsiblePerson) entry.responsiblePerson = responsiblePerson;
+    }
+  }
+
+  return result;
+}
+
+export type AreaPerformance = {
+  areaId: string;
+  areaLabel: string;
+  avgScore: number;
+  ratedCount: number;
+};
+
+export async function getAreaPerformance(days: number): Promise<AreaPerformance[]> {
+  const sheets = getSheetsClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID(),
+    range: `${SHEETS.EVALUATIONS}!A2:I`,
+  });
+
+  const rows = res.data.values || [];
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  const cutoffStr = cutoff.toISOString().slice(0, 10);
+
+  const totals = new Map<string, { sum: number; count: number; label: string }>();
+
+  for (const row of rows) {
+    const date = row[0];
+    const areaId = row[3];
+    const areaLabel = row[4];
+    const ratingRaw = row[5];
+    const ratingType = row[7];
+
+    if (ratingType !== "area" || ratingRaw === NA || !date || date < cutoffStr) continue;
+
+    const rating = Number(ratingRaw);
+    if (!Number.isFinite(rating)) continue;
+
+    const entry = totals.get(areaId) || { sum: 0, count: 0, label: areaLabel };
+    entry.sum += rating;
+    entry.count += 1;
+    totals.set(areaId, entry);
+  }
+
+  return Array.from(totals.entries())
+    .map(([areaId, { sum, count, label }]) => ({
+      areaId,
+      areaLabel: label,
+      avgScore: sum / count,
+      ratedCount: count,
+    }))
+    .sort((a, b) => a.avgScore - b.avgScore);
+}
+
 export type DailySummaryRowFull = {
   date: string;
   totalScore: number;

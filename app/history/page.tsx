@@ -22,12 +22,29 @@ type PersonScore = {
   ratedCount: number;
 };
 
+type AreaPerformance = {
+  areaId: string;
+  areaLabel: string;
+  avgScore: number;
+  ratedCount: number;
+};
+
 type SummaryResponse = {
   daily: DailyRow[];
   weekly: PeriodResult;
   monthly: PeriodResult;
   personScores: PersonScore[];
+  areaPerformance: AreaPerformance[];
+  areaPerformanceWindowDays: number;
 };
+
+function scoreColorClass(score: number): string {
+  if (score < 3) return "text-red-600";
+  if (score < 3.5) return "text-amber-600";
+  return "text-green-600";
+}
+
+const MIN_RATINGS_FOR_RANKING = 3;
 
 function StatusBadge({ status }: { status: string }) {
   return (
@@ -110,34 +127,103 @@ export default function HistoryPage() {
             ))}
           </div>
 
-          {data.personScores.length > 0 && (
-            <>
-              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 mb-2 mt-6">
-                Machine Cleanliness by Responsible Person
-              </h2>
-              <div className="bg-white rounded-2xl border border-zinc-200 divide-y divide-zinc-100">
-                {data.personScores.map((p) => (
-                  <div key={p.person} className="flex items-center justify-between p-4">
-                    <div>
-                      <p className="font-medium text-zinc-900">{p.person}</p>
-                      <p className="text-sm text-zinc-500">{p.ratedCount} ratings</p>
+          {(() => {
+            const ranked = data.areaPerformance.filter((a) => a.ratedCount >= MIN_RATINGS_FOR_RANKING);
+            if (ranked.length === 0) return null;
+            const needsImprovement = ranked.slice(0, 3);
+            const topPerforming = [...ranked].slice(-3).reverse();
+
+            return (
+              <>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 mb-2 mt-6">
+                  Area Hygiene - Last {data.areaPerformanceWindowDays} Days
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-medium text-zinc-500 mb-2">⚠️ Needs Improvement</p>
+                    <div className="bg-white rounded-2xl border border-zinc-200 divide-y divide-zinc-100">
+                      {needsImprovement.map((a) => (
+                        <div key={a.areaId} className="flex items-center justify-between p-3">
+                          <div>
+                            <p className="text-sm font-medium text-zinc-900">{a.areaLabel}</p>
+                            <p className="text-xs text-zinc-500">{a.ratedCount} ratings</p>
+                          </div>
+                          <span className={`text-sm font-semibold ${scoreColorClass(a.avgScore)}`}>
+                            {a.avgScore.toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
                     </div>
-                    <span
-                      className={`text-base font-semibold ${
-                        p.avgScore < 3
-                          ? "text-red-600"
-                          : p.avgScore < 3.5
-                          ? "text-amber-600"
-                          : "text-green-600"
-                      }`}
-                    >
-                      {p.avgScore.toFixed(2)}
-                    </span>
                   </div>
-                ))}
-              </div>
-            </>
-          )}
+                  <div>
+                    <p className="text-xs font-medium text-zinc-500 mb-2">🏆 Top Performing Areas</p>
+                    <div className="bg-white rounded-2xl border border-zinc-200 divide-y divide-zinc-100">
+                      {topPerforming.map((a) => (
+                        <div key={a.areaId} className="flex items-center justify-between p-3">
+                          <div>
+                            <p className="text-sm font-medium text-zinc-900">{a.areaLabel}</p>
+                            <p className="text-xs text-zinc-500">{a.ratedCount} ratings</p>
+                          </div>
+                          <span className={`text-sm font-semibold ${scoreColorClass(a.avgScore)}`}>
+                            {a.avgScore.toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+
+          {(() => {
+            const ranked = data.personScores.filter((p) => p.ratedCount >= MIN_RATINGS_FOR_RANKING);
+            if (ranked.length === 0) return null;
+            const topPerformers = [...ranked].slice(-3).reverse();
+            const needsImprovement = ranked.slice(0, 3);
+
+            return (
+              <>
+                <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500 mb-2 mt-6">
+                  Machine Cleanliness by Responsible Person
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                  <div>
+                    <p className="text-xs font-medium text-zinc-500 mb-2">🏆 Reward Candidates</p>
+                    <div className="bg-white rounded-2xl border border-zinc-200 divide-y divide-zinc-100">
+                      {topPerformers.map((p) => (
+                        <div key={p.person} className="flex items-center justify-between p-3">
+                          <div>
+                            <p className="text-sm font-medium text-zinc-900">{p.person}</p>
+                            <p className="text-xs text-zinc-500">{p.ratedCount} ratings</p>
+                          </div>
+                          <span className={`text-sm font-semibold ${scoreColorClass(p.avgScore)}`}>
+                            {p.avgScore.toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-zinc-500 mb-2">⚠️ Needs Improvement</p>
+                    <div className="bg-white rounded-2xl border border-zinc-200 divide-y divide-zinc-100">
+                      {needsImprovement.map((p) => (
+                        <div key={p.person} className="flex items-center justify-between p-3">
+                          <div>
+                            <p className="text-sm font-medium text-zinc-900">{p.person}</p>
+                            <p className="text-xs text-zinc-500">{p.ratedCount} ratings</p>
+                          </div>
+                          <span className={`text-sm font-semibold ${scoreColorClass(p.avgScore)}`}>
+                            {p.avgScore.toFixed(2)}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
         </>
       )}
     </main>

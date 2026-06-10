@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSubmissionForDate } from "@/lib/googleSheets";
+import { getSubmissionForDate, getAreaRatingsForDate } from "@/lib/googleSheets";
 
 function todayDate(): string {
   return new Date().toISOString().slice(0, 10);
@@ -8,5 +8,6 @@ function todayDate(): string {
 export async function GET() {
   const date = todayDate();
   const submission = await getSubmissionForDate(date);
-  return NextResponse.json({ date, submitted: !!submission, summary: submission });
+  const areas = submission ? await getAreaRatingsForDate(date) : {};
+  return NextResponse.json({ date, submitted: !!submission, summary: submission, areas });
 }

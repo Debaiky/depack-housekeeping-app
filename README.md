@@ -38,6 +38,20 @@ the average for that day — it does not count against the score.
 - Average of each day's average score in the month
 - **Unsatisfactory** if the monthly average is below 3.5, OR 4+ days that month were Unsatisfactory
 
+## Factory Map & Insights
+
+- **Today** (`/`) shows a color-coded factory map of today's submitted ratings
+  (red = poor, green = excellent, gray = no rating).
+- **Map** (`/map`) lets you pick any date and see the factory map plus a
+  ranked list of areas (and machine cleanliness / responsible person for
+  production areas) for that day.
+- **History** (`/history`) shows daily/weekly/monthly results plus, over the
+  last 30 days:
+  - **Area Hygiene**: areas needing improvement vs. top-performing areas.
+  - **Machine Cleanliness by Responsible Person**: reward candidates (highest
+    average) vs. people whose machines need attention (lowest average),
+    based on areas/people with at least 3 ratings.
+
 ## Areas Evaluated
 
 **Main Locations**: Warehouse, Office Building, Employee Changing Rooms, Cafeteria,

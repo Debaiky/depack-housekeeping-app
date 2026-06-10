@@ -30,6 +30,9 @@ export default function Header({ userEmail }: { userEmail?: string | null }) {
               <Link href="/" className="hover:text-blue-600">
                 Today
               </Link>
+              <Link href="/map" className="hover:text-blue-600">
+                Map
+              </Link>
               <Link href="/history" className="hover:text-blue-600">
                 History
               </Link>

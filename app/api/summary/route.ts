@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
-import { getDailySummaries, getMachineRatingsByPerson } from "@/lib/googleSheets";
+import { getDailySummaries, getMachineRatingsByPerson, getAreaPerformance } from "@/lib/googleSheets";
 import { computeWeeklyResult, computeMonthlyResult, type DailySummaryRow } from "@/lib/scoring";
+
+const AREA_PERFORMANCE_WINDOW_DAYS = 30;
 
 function startOfWeek(date: Date): Date {
   const d = new Date(date);
@@ -14,6 +16,7 @@ function startOfWeek(date: Date): Date {
 export async function GET() {
   const summaries = await getDailySummaries();
   const personScores = await getMachineRatingsByPerson();
+  const areaPerformance = await getAreaPerformance(AREA_PERFORMANCE_WINDOW_DAYS);
 
   const sorted = [...summaries].sort((a, b) => (a.date < b.date ? 1 : -1));
 
@@ -39,5 +42,7 @@ export async function GET() {
     weekly,
     monthly,
     personScores,
+    areaPerformance,
+    areaPerformanceWindowDays: AREA_PERFORMANCE_WINDOW_DAYS,
   });
 }

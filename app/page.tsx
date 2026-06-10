@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import FactoryMap, { type AreaScore } from "./components/FactoryMap";
 
 type TodayResponse = {
   date: string;
@@ -14,6 +15,7 @@ type TodayResponse = {
     submittedBy: string;
     ratedCount: number;
   } | null;
+  areas: Record<string, AreaScore>;
 };
 
 export default function Home() {
@@ -72,7 +74,27 @@ export default function Home() {
             for trends.
           </p>
         </div>
-      ) : (
+      ) : null}
+
+      {!loading && today?.submitted && (
+        <div className="mt-6">
+          <div className="flex items-center justify-between mb-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+              Factory Map - Today
+            </h2>
+            <Link href="/map" className="text-sm text-blue-600 font-medium underline">
+              View by date →
+            </Link>
+          </div>
+          <FactoryMap scores={today.areas} />
+          <p className="text-xs text-zinc-400 mt-2">
+            Color shows each area&apos;s average rating today (red = poor, green = excellent).
+            Gray means no rating was recorded for that area.
+          </p>
+        </div>
+      )}
+
+      {!loading && !today?.submitted && (
         <div className="bg-white rounded-2xl border border-zinc-200 p-6 text-center space-y-4">
           <p className="text-zinc-700">No evaluation has been submitted for today yet.</p>
           <Link
