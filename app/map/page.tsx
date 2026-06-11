@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { ALL_AREAS, isProductionArea } from "@/lib/areas";
 import FactoryMap, { type AreaScore } from "../components/FactoryMap";
+import AreaDetailsModal from "../components/AreaDetailsModal";
 
 type AreaRatingSummary = AreaScore & {
   machineAvgScore: number | null;
@@ -34,6 +35,7 @@ export default function MapPage() {
   const [data, setData] = useState<MapResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
+  const [detailsAreaId, setDetailsAreaId] = useState<string | null>(null);
 
   useEffect(() => {
     const from = dateFrom <= dateTo ? dateFrom : dateTo;
@@ -43,6 +45,17 @@ export default function MapPage() {
       .then(setData)
       .finally(() => setLoading(false));
   }, [dateFrom, dateTo]);
+
+  const from = dateFrom <= dateTo ? dateFrom : dateTo;
+  const to = dateFrom <= dateTo ? dateTo : dateFrom;
+  const rangeDays =
+    Math.round((new Date(to).getTime() - new Date(from).getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const detailsEnabled = rangeDays <= 7;
+
+  function handleAreaClick(id: string) {
+    setSelectedAreaId((cur) => (cur === id ? null : id));
+    if (detailsEnabled) setDetailsAreaId(id);
+  }
 
   const sortedAreas = [...ALL_AREAS].sort((a, b) => {
     const sa = data?.areas[a.id]?.avgScore;
@@ -90,8 +103,13 @@ export default function MapPage() {
           <FactoryMap
             scores={data?.areas || {}}
             selectedAreaId={selectedAreaId}
-            onAreaClick={(id) => setSelectedAreaId((cur) => (cur === id ? null : id))}
+            onAreaClick={handleAreaClick}
           />
+          {detailsEnabled && (
+            <p className="text-xs text-zinc-400 mt-1">
+              Tap an area to see individual ratings, photos and notes for this period.
+            </p>
+          )}
 
           <div className="mt-6 bg-white rounded-2xl border border-zinc-200 divide-y divide-zinc-100">
             {sortedAreas.map((area) => {
@@ -100,7 +118,7 @@ export default function MapPage() {
               return (
                 <div
                   key={area.id}
-                  onClick={() => setSelectedAreaId((cur) => (cur === area.id ? null : area.id))}
+                  onClick={() => handleAreaClick(area.id)}
                   className={`p-4 cursor-pointer ${isSelected ? "bg-blue-50" : ""}`}
                 >
                   <div className="flex items-center justify-between">
@@ -162,6 +180,16 @@ export default function MapPage() {
             </span>
           </div>
         </>
+      )}
+
+      {detailsEnabled && detailsAreaId && (
+        <AreaDetailsModal
+          key={`${detailsAreaId}-${from}-${to}`}
+          areaId={detailsAreaId}
+          from={from}
+          to={to}
+          onClose={() => setDetailsAreaId(null)}
+        />
       )}
     </main>
   );

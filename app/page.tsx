@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import FactoryMap, { type AreaScore } from "./components/FactoryMap";
+import AreaDetailsModal from "./components/AreaDetailsModal";
 
 type TodayResponse = {
   date: string;
@@ -21,6 +22,7 @@ type TodayResponse = {
 export default function Home() {
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedAreaId, setSelectedAreaId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/evaluations/today")
@@ -98,10 +100,11 @@ export default function Home() {
               View by date →
             </Link>
           </div>
-          <FactoryMap scores={today.areas} />
+          <FactoryMap scores={today.areas} onAreaClick={(id) => setSelectedAreaId(id)} />
           <p className="text-xs text-zinc-400 mt-2">
             Color shows each area&apos;s average rating today across all users (red = poor,
-            green = excellent). Gray means no rating was recorded for that area yet.
+            green = excellent). Gray means no rating was recorded for that area yet. Tap an
+            area to see individual ratings, photos and notes.
           </p>
         </div>
       )}
@@ -111,6 +114,16 @@ export default function Home() {
           View weekly &amp; monthly history →
         </Link>
       </div>
+
+      {selectedAreaId && today && (
+        <AreaDetailsModal
+          key={`${selectedAreaId}-${today.date}-${today.date}`}
+          areaId={selectedAreaId}
+          from={today.date}
+          to={today.date}
+          onClose={() => setSelectedAreaId(null)}
+        />
+      )}
     </main>
   );
 }

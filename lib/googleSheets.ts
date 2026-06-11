@@ -149,6 +149,52 @@ export async function getMachineRatingsByPerson(): Promise<PersonAverage[]> {
     .sort((a, b) => a.avgScore - b.avgScore);
 }
 
+export type AreaEvaluationDetail = {
+  date: string;
+  userEmail: string;
+  rating: RatingValue | null;
+  photoUrl: string;
+  ratingType: "area" | "machine";
+  responsiblePerson: string;
+  note: string;
+};
+
+export async function getAreaEvaluationDetails(
+  areaId: string,
+  dateFrom: string,
+  dateTo: string
+): Promise<AreaEvaluationDetail[]> {
+  const sheets = getSheetsClient();
+  const res = await sheets.spreadsheets.values.get({
+    spreadsheetId: SHEET_ID(),
+    range: `${SHEETS.EVALUATIONS}!A2:J`,
+  });
+
+  const rows = res.data.values || [];
+  const details: AreaEvaluationDetail[] = [];
+
+  for (const row of rows) {
+    const date = row[0];
+    if (!date || date < dateFrom || date > dateTo) continue;
+    if (row[3] !== areaId) continue;
+
+    const ratingRaw = row[5];
+    const rating = ratingRaw === NA ? NA : Number.isFinite(Number(ratingRaw)) ? (Number(ratingRaw) as RatingValue) : null;
+
+    details.push({
+      date,
+      userEmail: row[2] || "",
+      rating,
+      photoUrl: row[6] || "",
+      ratingType: row[7] === "machine" ? "machine" : "area",
+      responsiblePerson: (row[8] || "").trim(),
+      note: (row[9] || "").trim(),
+    });
+  }
+
+  return details.sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
+}
+
 export type AreaRatingSummary = {
   areaId: string;
   avgScore: number | null;
