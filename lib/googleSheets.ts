@@ -314,6 +314,19 @@ export async function getSubmissionForDate(date: string): Promise<DailySummaryRo
   return summaries.find((s) => s.date === date) || null;
 }
 
+export async function getSubmissionForUserAndDate(
+  date: string,
+  email: string
+): Promise<DailySummaryRowFull | null> {
+  const summaries = await getDailySummaries();
+  const normalizedEmail = email.trim().toLowerCase();
+  return (
+    summaries.find(
+      (s) => s.date === date && s.submittedBy.trim().toLowerCase() === normalizedEmail
+    ) || null
+  );
+}
+
 export type UserRatingSummary = {
   email: string;
   name: string;

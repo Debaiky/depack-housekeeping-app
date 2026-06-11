@@ -67,7 +67,7 @@ export default function Home() {
             <span className="text-sm">{today.summary.submittedBy}</span>
           </div>
           <p className="text-sm text-zinc-500 pt-2">
-            Today&apos;s evaluation has already been submitted. Check the{" "}
+            You&apos;ve submitted today&apos;s evaluation. Check the{" "}
             <Link href="/history" className="text-blue-600 font-medium underline">
               history page
             </Link>{" "}
@@ -76,7 +76,19 @@ export default function Home() {
         </div>
       ) : null}
 
-      {!loading && today?.submitted && (
+      {!loading && !today?.submitted && (
+        <div className="bg-white rounded-2xl border border-zinc-200 p-6 text-center space-y-4">
+          <p className="text-zinc-700">You haven&apos;t submitted today&apos;s evaluation yet.</p>
+          <Link
+            href="/evaluate"
+            className="inline-block w-full rounded-lg bg-blue-600 text-white font-semibold py-3 text-base"
+          >
+            Start Today&apos;s Evaluation
+          </Link>
+        </div>
+      )}
+
+      {!loading && today && (
         <div className="mt-6">
           <div className="flex items-center justify-between mb-2">
             <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
@@ -88,21 +100,9 @@ export default function Home() {
           </div>
           <FactoryMap scores={today.areas} />
           <p className="text-xs text-zinc-400 mt-2">
-            Color shows each area&apos;s average rating today (red = poor, green = excellent).
-            Gray means no rating was recorded for that area.
+            Color shows each area&apos;s average rating today across all users (red = poor,
+            green = excellent). Gray means no rating was recorded for that area yet.
           </p>
-        </div>
-      )}
-
-      {!loading && !today?.submitted && (
-        <div className="bg-white rounded-2xl border border-zinc-200 p-6 text-center space-y-4">
-          <p className="text-zinc-700">No evaluation has been submitted for today yet.</p>
-          <Link
-            href="/evaluate"
-            className="inline-block w-full rounded-lg bg-blue-600 text-white font-semibold py-3 text-base"
-          >
-            Start Today&apos;s Evaluation
-          </Link>
         </div>
       )}
 

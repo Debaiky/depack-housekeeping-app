@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { MAIN_LOCATIONS, PRODUCTION_AREAS, NA, hasMachineRating, type RatingValue } from "@/lib/areas";
 import { computeDailyResult, type RatingEntry } from "@/lib/scoring";
-import { appendEvaluationRows, appendDailySummary, getSubmissionForDate } from "@/lib/googleSheets";
+import { appendEvaluationRows, appendDailySummary, getSubmissionForUserAndDate } from "@/lib/googleSheets";
 import { uploadEvaluationPhoto } from "@/lib/googleDrive";
 import { getSession } from "@/lib/auth";
 
@@ -30,10 +30,10 @@ export async function POST(request: Request) {
 
   const date = todayDate();
 
-  const existing = await getSubmissionForDate(date);
+  const existing = await getSubmissionForUserAndDate(date, session.email);
   if (existing) {
     return NextResponse.json(
-      { error: "An evaluation for today has already been submitted." },
+      { error: "You have already submitted today's evaluation." },
       { status: 409 }
     );
   }

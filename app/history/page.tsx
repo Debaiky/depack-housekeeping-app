@@ -7,6 +7,7 @@ type DailyRow = {
   totalScore: number;
   avgScore: number;
   status: string;
+  submittedBy: string;
 };
 
 type PeriodResult = {
@@ -114,12 +115,13 @@ export default function HistoryPage() {
             {data.daily.length === 0 && (
               <p className="p-4 text-sm text-zinc-400">No evaluations recorded yet.</p>
             )}
-            {data.daily.map((row) => (
-              <div key={row.date} className="flex items-center justify-between p-4">
+            {data.daily.map((row, i) => (
+              <div key={`${row.date}-${i}`} className="flex items-center justify-between p-4">
                 <div>
                   <p className="font-medium text-zinc-900">{row.date}</p>
                   <p className="text-sm text-zinc-500">
                     Total {row.totalScore} · Avg {row.avgScore.toFixed(2)}
+                    {row.submittedBy ? ` · ${row.submittedBy}` : ""}
                   </p>
                 </div>
                 <StatusBadge status={row.status} />

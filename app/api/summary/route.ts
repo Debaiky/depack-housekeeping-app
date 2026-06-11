@@ -18,7 +18,15 @@ export async function GET() {
   const personScores = await getMachineRatingsByPerson();
   const areaPerformance = await getAreaPerformance(AREA_PERFORMANCE_WINDOW_DAYS);
 
-  const sorted = [...summaries].sort((a, b) => (a.date < b.date ? 1 : -1));
+  const sorted = [...summaries]
+    .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0))
+    .map((s) => ({
+      date: s.date,
+      totalScore: s.totalScore,
+      avgScore: s.avgScore,
+      status: s.status,
+      submittedBy: s.submittedBy,
+    }));
 
   const days: DailySummaryRow[] = summaries.map((s) => ({
     date: s.date,
