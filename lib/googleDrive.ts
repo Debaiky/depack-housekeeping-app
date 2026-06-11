@@ -7,7 +7,7 @@ const ROOT_FOLDER_ID = () => {
   return id;
 };
 
-async function getOrCreateDateFolder(date: string): Promise<string> {
+export async function getOrCreateDateFolder(date: string): Promise<string> {
   const drive = getDriveClient();
   const parent = ROOT_FOLDER_ID();
 
@@ -41,9 +41,10 @@ export async function uploadEvaluationPhoto(opts: {
   userEmail: string;
   buffer: Buffer;
   mimeType: string;
+  folderId?: string;
 }): Promise<string> {
   const drive = getDriveClient();
-  const folderId = await getOrCreateDateFolder(opts.date);
+  const folderId = opts.folderId || (await getOrCreateDateFolder(opts.date));
 
   const ext = opts.mimeType.split("/")[1] || "jpg";
   const safeUser = opts.userEmail.replace(/[^a-zA-Z0-9._-]/g, "_");

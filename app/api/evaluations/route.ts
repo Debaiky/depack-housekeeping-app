@@ -1,8 +1,13 @@
 import { NextResponse } from "next/server";
 import { MAIN_LOCATIONS, PRODUCTION_AREAS, NA, hasMachineRating, type RatingValue } from "@/lib/areas";
 import { computeDailyResult, type RatingEntry } from "@/lib/scoring";
-import { appendEvaluationRows, appendDailySummary, getSubmissionForUserAndDate } from "@/lib/googleSheets";
-import { uploadEvaluationPhoto } from "@/lib/googleDrive";
+import {
+  appendEvaluationRows,
+  appendDailySummary,
+  getSubmissionForUserAndDate,
+  type EvaluationRow,
+} from "@/lib/googleSheets";
+import { uploadEvaluationPhoto, getOrCreateDateFolder } from "@/lib/googleDrive";
 import { getSession } from "@/lib/auth";
 
 function todayDate(): string {
@@ -65,28 +70,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: (e as Error).message }, { status: 400 });
   }
 
-  const evaluationRows = [];
+  const evaluationRows: EvaluationRow[] = [];
   const ratingEntries: RatingEntry[] = [];
+  const photoUploads: { rowIndex: number; buffer: Buffer; mimeType: string }[] = [];
 
   for (const area of MAIN_LOCATIONS) {
     const rating = areaRatings[area.id];
     ratingEntries.push({ key: area.id, rating });
 
-    let photoUrl = "";
-    const photo = formData.get(`photo_${area.id}`);
-    if (photo instanceof File && photo.size > 0) {
-      const buffer = Buffer.from(await photo.arrayBuffer());
-      photoUrl = await uploadEvaluationPhoto({
-        date,
-        areaId: area.id,
-        userEmail: session.email,
-        buffer,
-        mimeType: photo.type || "image/jpeg",
-      });
-    }
-
     const note = (formData.get(`note_${area.id}`) as string | null)?.trim() || "";
 
+    const rowIndex = evaluationRows.length;
     evaluationRows.push({
       date,
       timestamp,
@@ -94,11 +88,20 @@ export async function POST(request: Request) {
       areaId: area.id,
       areaLabel: area.label,
       rating,
-      photoUrl,
+      photoUrl: "",
       ratingType: "area" as const,
       responsiblePerson: "",
       note,
     });
+
+    const photo = formData.get(`photo_${area.id}`);
+    if (photo instanceof File && photo.size > 0) {
+      photoUploads.push({
+        rowIndex,
+        buffer: Buffer.from(await photo.arrayBuffer()),
+        mimeType: photo.type || "image/jpeg",
+      });
+    }
   }
 
   for (const area of PRODUCTION_AREAS) {
@@ -111,21 +114,9 @@ export async function POST(request: Request) {
       ratingEntries.push({ key: `machine_${area.id}`, rating: machineRating });
     }
 
-    let photoUrl = "";
-    const photo = formData.get(`photo_${area.id}`);
-    if (photo instanceof File && photo.size > 0) {
-      const buffer = Buffer.from(await photo.arrayBuffer());
-      photoUrl = await uploadEvaluationPhoto({
-        date,
-        areaId: area.id,
-        userEmail: session.email,
-        buffer,
-        mimeType: photo.type || "image/jpeg",
-      });
-    }
-
     const note = (formData.get(`note_${area.id}`) as string | null)?.trim() || "";
 
+    const rowIndex = evaluationRows.length;
     evaluationRows.push({
       date,
       timestamp,
@@ -133,11 +124,20 @@ export async function POST(request: Request) {
       areaId: area.id,
       areaLabel: area.label,
       rating,
-      photoUrl,
+      photoUrl: "",
       ratingType: "area" as const,
       responsiblePerson: "",
       note,
     });
+
+    const photo = formData.get(`photo_${area.id}`);
+    if (photo instanceof File && photo.size > 0) {
+      photoUploads.push({
+        rowIndex,
+        buffer: Buffer.from(await photo.arrayBuffer()),
+        mimeType: photo.type || "image/jpeg",
+      });
+    }
 
     if (hasMachineRating(area)) {
       evaluationRows.push({
@@ -153,6 +153,25 @@ export async function POST(request: Request) {
         note: "",
       });
     }
+  }
+
+  if (photoUploads.length > 0) {
+    const folderId = await getOrCreateDateFolder(date);
+    const uploadedUrls = await Promise.all(
+      photoUploads.map(({ rowIndex, buffer, mimeType }) =>
+        uploadEvaluationPhoto({
+          date,
+          areaId: evaluationRows[rowIndex].areaId,
+          userEmail: session.email,
+          buffer,
+          mimeType,
+          folderId,
+        })
+      )
+    );
+    photoUploads.forEach(({ rowIndex }, i) => {
+      evaluationRows[rowIndex].photoUrl = uploadedUrls[i];
+    });
   }
 
   await appendEvaluationRows(evaluationRows);
