@@ -15,6 +15,9 @@ type TodayResponse = {
     status: string;
     submittedBy: string;
     ratedCount: number;
+    hygieneAvg?: number;
+    safetyAvg?: number;
+    infraAvg?: number;
   } | null;
   areas: Record<string, AreaScore>;
 };
@@ -61,9 +64,23 @@ export default function Home() {
             </span>
           </div>
           <div className="flex items-center justify-between">
-            <span className="text-sm font-medium text-zinc-500">Average</span>
+            <span className="text-sm font-medium text-zinc-500">Overall Average</span>
             <span className="text-base font-semibold">{today.summary.avgScore.toFixed(2)}</span>
           </div>
+          {today.summary.hygieneAvg !== undefined && (
+            <div className="grid grid-cols-3 gap-2 pt-1 border-t border-zinc-100">
+              {[
+                { label: "Hygiene", val: today.summary.hygieneAvg },
+                { label: "Safety", val: today.summary.safetyAvg },
+                { label: "Infrastructure", val: today.summary.infraAvg },
+              ].map(({ label, val }) => (
+                <div key={label} className="text-center">
+                  <p className="text-xs text-zinc-400">{label}</p>
+                  <p className="text-sm font-semibold">{val?.toFixed(2) ?? "-"}</p>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="flex items-center justify-between">
             <span className="text-sm font-medium text-zinc-500">Submitted by</span>
             <span className="text-sm">{today.summary.submittedBy}</span>

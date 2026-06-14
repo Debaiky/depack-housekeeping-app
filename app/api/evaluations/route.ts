@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { MAIN_LOCATIONS, PRODUCTION_AREAS, NA, hasMachineRating, type RatingValue } from "@/lib/areas";
+import { MAIN_LOCATIONS, PRODUCTION_AREAS, NA, hasMachineRating, type RatingValue, type EvalCategory } from "@/lib/areas";
 import { computeDailyResult, type RatingEntry } from "@/lib/scoring";
 import {
   appendEvaluationRows,
@@ -15,11 +15,8 @@ function todayDate(): string {
 }
 
 function parseRating(value: FormDataEntryValue | null, label: string): RatingValue {
-  if (value === null) {
-    throw new Error(`Missing rating for ${label}`);
-  }
+  if (value === null) throw new Error(`Missing rating for ${label}`);
   if (value === NA) return NA;
-
   const rating = Number(value);
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
     throw new Error(`Invalid rating for ${label}`);
@@ -29,41 +26,35 @@ function parseRating(value: FormDataEntryValue | null, label: string): RatingVal
 
 export async function POST(request: Request) {
   const session = await getSession();
-  if (!session) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
   const date = todayDate();
-
   const existing = await getSubmissionForUserAndDate(date, session.email);
   if (existing) {
-    return NextResponse.json(
-      { error: "You have already submitted today's evaluation." },
-      { status: 409 }
-    );
+    return NextResponse.json({ error: "You have already submitted today's evaluation." }, { status: 409 });
   }
 
   const formData = await request.formData();
   const timestamp = new Date().toISOString();
 
-  let areaRatings: Record<string, RatingValue>;
-  let machineRatings: Record<string, RatingValue>;
+  type AreaCat = { hygiene: RatingValue; safety: RatingValue; infra: RatingValue };
+  type MachineCat = { hygiene: RatingValue; safety: RatingValue };
+  const areaRatings: Record<string, AreaCat> = {};
+  const machineRatings: Record<string, MachineCat> = {};
 
   try {
-    areaRatings = {};
-    machineRatings = {};
-
-    for (const area of MAIN_LOCATIONS) {
-      areaRatings[area.id] = parseRating(formData.get(`rating_${area.id}`), area.label);
-    }
-
-    for (const area of PRODUCTION_AREAS) {
-      areaRatings[area.id] = parseRating(formData.get(`rating_${area.id}`), area.label);
+    for (const area of [...MAIN_LOCATIONS, ...PRODUCTION_AREAS]) {
+      const id = area.id;
+      areaRatings[id] = {
+        hygiene: parseRating(formData.get(`hygiene_rating_${id}`), `${area.label} (hygiene)`),
+        safety: parseRating(formData.get(`safety_rating_${id}`), `${area.label} (safety)`),
+        infra: parseRating(formData.get(`infra_rating_${id}`), `${area.label} (infrastructure)`),
+      };
       if (hasMachineRating(area)) {
-        machineRatings[area.id] = parseRating(
-          formData.get(`machine_rating_${area.id}`),
-          `${area.label} (machine)`
-        );
+        machineRatings[id] = {
+          hygiene: parseRating(formData.get(`hygiene_machine_rating_${id}`), `${area.label} machine (hygiene)`),
+          safety: parseRating(formData.get(`safety_machine_rating_${id}`), `${area.label} machine (safety)`),
+        };
       }
     }
   } catch (e) {
@@ -71,30 +62,13 @@ export async function POST(request: Request) {
   }
 
   const evaluationRows: EvaluationRow[] = [];
-  const ratingEntries: RatingEntry[] = [];
+  const hygieneEntries: RatingEntry[] = [];
+  const safetyEntries: RatingEntry[] = [];
+  const infraEntries: RatingEntry[] = [];
   const photoUploads: { rowIndex: number; buffer: Buffer; mimeType: string }[] = [];
 
-  for (const area of MAIN_LOCATIONS) {
-    const rating = areaRatings[area.id];
-    ratingEntries.push({ key: area.id, rating });
-
-    const note = (formData.get(`note_${area.id}`) as string | null)?.trim() || "";
-
-    const rowIndex = evaluationRows.length;
-    evaluationRows.push({
-      date,
-      timestamp,
-      userEmail: session.email,
-      areaId: area.id,
-      areaLabel: area.label,
-      rating,
-      photoUrl: "",
-      ratingType: "area" as const,
-      responsiblePerson: "",
-      note,
-    });
-
-    const photo = formData.get(`photo_${area.id}`);
+  async function collectPhoto(formKey: string, rowIndex: number) {
+    const photo = formData.get(formKey);
     if (photo instanceof File && photo.size > 0) {
       photoUploads.push({
         rowIndex,
@@ -104,54 +78,53 @@ export async function POST(request: Request) {
     }
   }
 
-  for (const area of PRODUCTION_AREAS) {
-    const rating = areaRatings[area.id];
-    const machineRating = machineRatings[area.id];
-    const responsiblePerson = (formData.get(`person_${area.id}`) as string | null)?.trim() || "";
+  for (const area of [...MAIN_LOCATIONS, ...PRODUCTION_AREAS]) {
+    const id = area.id;
+    const cats = areaRatings[id];
+    const responsiblePerson = hasMachineRating(area)
+      ? ((formData.get(`person_${id}`) as string | null)?.trim() || "")
+      : "";
 
-    ratingEntries.push({ key: area.id, rating });
-    if (hasMachineRating(area)) {
-      ratingEntries.push({ key: `machine_${area.id}`, rating: machineRating });
-    }
+    // Three area rows — one per category
+    const catMap: [EvalCategory, RatingValue, string, string][] = [
+      ["hygiene", cats.hygiene, `hygiene_note_${id}`, `hygiene_photo_${id}`],
+      ["safety", cats.safety, `safety_note_${id}`, `safety_photo_${id}`],
+      ["infrastructure", cats.infra, `infra_note_${id}`, `infra_photo_${id}`],
+    ];
 
-    const note = (formData.get(`note_${area.id}`) as string | null)?.trim() || "";
-
-    const rowIndex = evaluationRows.length;
-    evaluationRows.push({
-      date,
-      timestamp,
-      userEmail: session.email,
-      areaId: area.id,
-      areaLabel: area.label,
-      rating,
-      photoUrl: "",
-      ratingType: "area" as const,
-      responsiblePerson: "",
-      note,
-    });
-
-    const photo = formData.get(`photo_${area.id}`);
-    if (photo instanceof File && photo.size > 0) {
-      photoUploads.push({
-        rowIndex,
-        buffer: Buffer.from(await photo.arrayBuffer()),
-        mimeType: photo.type || "image/jpeg",
-      });
-    }
-
-    if (hasMachineRating(area)) {
+    for (const [category, rating, noteKey, photoKey] of catMap) {
+      const note = (formData.get(noteKey) as string | null)?.trim() || "";
+      const rowIndex = evaluationRows.length;
       evaluationRows.push({
-        date,
-        timestamp,
-        userEmail: session.email,
-        areaId: area.id,
-        areaLabel: `${area.label} (Machine)`,
-        rating: machineRating,
-        photoUrl: "",
-        ratingType: "machine" as const,
-        responsiblePerson,
-        note: "",
+        date, timestamp, userEmail: session.email,
+        areaId: id, areaLabel: area.label,
+        rating, photoUrl: "", ratingType: "area",
+        responsiblePerson: category === "hygiene" ? responsiblePerson : "",
+        note, category,
       });
+      await collectPhoto(photoKey, rowIndex);
+      if (category === "hygiene") hygieneEntries.push({ key: id, rating });
+      else if (category === "safety") safetyEntries.push({ key: id, rating });
+      else infraEntries.push({ key: id, rating });
+    }
+
+    // Machine rows (hygiene + safety) for applicable areas
+    if (hasMachineRating(area)) {
+      const mc = machineRatings[id];
+      for (const [category, rating] of [
+        ["hygiene", mc.hygiene],
+        ["safety", mc.safety],
+      ] as [EvalCategory, RatingValue][]) {
+        evaluationRows.push({
+          date, timestamp, userEmail: session.email,
+          areaId: id, areaLabel: `${area.label} (Machine)`,
+          rating, photoUrl: "", ratingType: "machine",
+          responsiblePerson: category === "hygiene" ? responsiblePerson : "",
+          note: "", category,
+        });
+        if (category === "hygiene") hygieneEntries.push({ key: `machine_${id}`, rating });
+        else safetyEntries.push({ key: `machine_${id}`, rating });
+      }
     }
   }
 
@@ -176,7 +149,7 @@ export async function POST(request: Request) {
 
   await appendEvaluationRows(evaluationRows);
 
-  const result = computeDailyResult(ratingEntries);
+  const result = computeDailyResult(hygieneEntries, safetyEntries, infraEntries);
 
   await appendDailySummary({
     date,
@@ -185,6 +158,9 @@ export async function POST(request: Request) {
     status: result.status,
     submittedBy: session.email,
     ratedCount: result.ratedCount,
+    hygieneAvg: Math.round(result.hygieneAvg * 100) / 100,
+    safetyAvg: Math.round(result.safetyAvg * 100) / 100,
+    infraAvg: Math.round(result.infraAvg * 100) / 100,
   });
 
   return NextResponse.json({ ok: true, result });

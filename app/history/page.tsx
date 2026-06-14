@@ -8,6 +8,9 @@ type DailyRow = {
   avgScore: number;
   status: string;
   submittedBy: string;
+  hygieneAvg?: number;
+  safetyAvg?: number;
+  infraAvg?: number;
 };
 
 type PeriodResult = {
@@ -116,15 +119,24 @@ export default function HistoryPage() {
               <p className="p-4 text-sm text-zinc-400">No evaluations recorded yet.</p>
             )}
             {data.daily.map((row, i) => (
-              <div key={`${row.date}-${i}`} className="flex items-center justify-between p-4">
-                <div>
-                  <p className="font-medium text-zinc-900">{row.date}</p>
-                  <p className="text-sm text-zinc-500">
-                    Total {row.totalScore} · Avg {row.avgScore.toFixed(2)}
-                    {row.submittedBy ? ` · ${row.submittedBy}` : ""}
-                  </p>
+              <div key={`${row.date}-${i}`} className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="font-medium text-zinc-900">{row.date}</p>
+                    <p className="text-sm text-zinc-500">
+                      Total {row.totalScore} · Avg {row.avgScore.toFixed(2)}
+                      {row.submittedBy ? ` · ${row.submittedBy}` : ""}
+                    </p>
+                  </div>
+                  <StatusBadge status={row.status} />
                 </div>
-                <StatusBadge status={row.status} />
+                {(row.hygieneAvg !== undefined || row.safetyAvg !== undefined || row.infraAvg !== undefined) && (
+                  <div className="mt-2 grid grid-cols-3 gap-2 text-xs text-center text-zinc-500">
+                    <span>H: {row.hygieneAvg?.toFixed(2) ?? "-"}</span>
+                    <span>S: {row.safetyAvg?.toFixed(2) ?? "-"}</span>
+                    <span>I: {row.infraAvg?.toFixed(2) ?? "-"}</span>
+                  </div>
+                )}
               </div>
             ))}
           </div>
